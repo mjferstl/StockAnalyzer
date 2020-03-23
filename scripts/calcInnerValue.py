@@ -3,6 +3,7 @@
 # ---------- MODULES ----------
 # user modules
 from classes.Stock import Stock
+from classes.StockAnalyzer import StockAnalyzer
 
 if __name__ == "__main__":
     print()
@@ -15,7 +16,9 @@ if __name__ == "__main__":
         WachstumsratePrc=3,\
         priceEarningsRatio=[9.85,10.02,11.23,10.37,12.57,10.05,11.55],\
         symbol='ALV')
-    print(Allianz)
+    AllianzAnalysis = StockAnalyzer(Allianz)
+    AllianzAnalysis.printAnalysis()
+    #print(Allianz)
 
 
     # # Nike 
@@ -104,7 +107,8 @@ if __name__ == "__main__":
         WachstumsratePrc=13,\
         priceEarningsRatio=[13.39,15.86,29.83,24.37,25.44,46.30,26.47],\
         symbol='MSF')
-    print(Microsoft)
+    MicrosoftAnalysis = StockAnalyzer(Microsoft)
+    MicrosoftAnalysis.printAnalysis()
 
     # # Wachstumsrate lt. finanzen.net (21.03.2020): 12.31% --> 10%
     # SiemensHealthineers = Stock(name='Siemens Healthineers',\

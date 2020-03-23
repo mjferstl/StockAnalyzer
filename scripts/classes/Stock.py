@@ -34,10 +34,6 @@ class Stock:
         self.dividend = None
         self.netIncome = None
 
-        # variables for anayzing the stock
-        self.GrahamNumber = None
-        self.innerValue = None
-
         #
         self.mainDataLoaded = False
 
@@ -61,9 +57,6 @@ class Stock:
         print(self.ticker.financials)
         print(self.ticker.isin)
 
-        # Analyze Stock
-        self.analyzeStock()
-
 
     def loadMainData(self):
         self.getStockName()
@@ -77,13 +70,6 @@ class Stock:
         # change the flag to indicate that all data has been loaded
         self.mainDataLoaded = True
 
-
-    def analyzeStock(self):
-        if not self.mainDataLoaded:
-            self.loadMainData()
-
-        self.calcGrahamNumber()
-    
 
     def getTicker(self):
         print('Creating ticker...')
@@ -198,68 +184,6 @@ class Stock:
             return value
 
 
-    def calcGrahamNumber(self):
-        if self.bookValuePerShare is not None:
-            self.GrahamNumber = np.sqrt(15 * self.meanEarningsPerShare * 1.5 * self.bookValuePerShare)
-
-
-    # Funktion zur Berechnung des sog. "inneren Wertes" der Aktie
-    def calcInnerValue(self,renditeerwartung=8):
-        self.innerValue = calcInnerValue10years(self.meanEarningsPerShare,self.Wachstumsrate,self.meanPriceEarningsRatio,renditeerwartung)
-
-
     # Funktion zur Formattierung der Ausgabe
     def __str__(self):
-        if self.innerValue is None:
-            self.calcInnerValue()
-
-        strGrahamNumber = ''
-        if self.GrahamNumber is not None:
-            strGrahamNumber = 'Graham Number:     {gn:6.2f}'.format(gn=self.GrahamNumber) + ' ' + self.currencySymbol + '\n'
-
-        #self.currentStockValue = self.getCurrentStockValue()
-        strCurrentStockValue = ''
-        if (self.currentStockValue is not None):
-            strCurrentStockValue = 'Aktueller Kurs:    {val:6.2f}'.format(val=self.currentStockValue) + ' ' + self.currencySymbol + '\n'
-
-        if self.currencySymbol is None:
-            self.getCurrency()
-
-        strDividend = ''
-        if self.dividend is not None:
-            strDividendYield = ''
-            if self.currentStockValue is not None:
-                strDividendYield = ' (' + u"\u2248" + '{divYield:3.1f}%)'.format(divYield=self.dividend/self.currentStockValue*100)
-            strDividend = 'Dividend:          {div:6.2f}'.format(div=self.dividend) + ' ' + self.currencySymbol + strDividendYield + '\n'
-
-        return '-'*27 + '\n' + \
-            ' '*3 + self.name + '\n' + \
-            'avg. weighted EPS: {eps:6.2f}'.format(eps=self.meanEarningsPerShare) + ' ' + self.currencySymbol + '\n' + \
-            'avg. P/E:          {priceEarningsRatio:6.2f}'.format(priceEarningsRatio=self.meanPriceEarningsRatio) + '\n' + \
-            strDividend + \
-            '\n' + \
-            'Fairer Wert:       {val:6.2f}'.format(val=self.innerValue) + ' ' + self.currencySymbol + '\n' + \
-            strGrahamNumber + \
-            strCurrentStockValue + \
-            '-'*27 + '\n'
-
-
-# ---------- FUNCTIONS ----------
-#
-
-def calcInnerValue10years(earningsPerShare,Wachstumsrate,priceEarningsRatio,Renditeerwartung,marginOfSafety=0.1):
-    """
-        Berechnung des "Inneren Wertes" (oft auch als "Fairer Wert" bezeichnet)
-        Berechnungsgrundpagen:
-        - angegebene Wachstumsrate gilt fuer die naechsten 10 Jahre
-        - Margin of Safety: 10%, sofern nicht anders angegeben
-    """
-    # Berechnung des Gewinns pro Aktie in 10 Jahren
-    gewinn10y = earningsPerShare*(Wachstumsrate**10)
-
-    # Berechnung des Aktienpreises in 10 Jahren auf Grundlage des aktuellen Kurs-Gewinn-Verhältnisses
-    price10y = gewinn10y*priceEarningsRatio
-
-    # Berechnung des fairen/inneren Preises zum aktuellen Zeitpunkt auf Grundlage der Renditeerwartung
-    innererWert = price10y/((1+(Renditeerwartung/100))**10)
-    return innererWert*(1-marginOfSafety)
+        return '<Stock Object>'
