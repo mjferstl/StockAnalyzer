@@ -11,6 +11,9 @@ import yfinance as yf
 
 # ---------- VARIABLES ----------
 
+# DEV-VARIABLES
+DEBUG = False
+
 # default symbol for the stock exchange trading place
 # - de: XETRA
 exchangeTradingPlace = 'DE'
@@ -22,9 +25,11 @@ DOLLAR = u"\u0024"
 
 # ---------- CLASSES ----------
 class Stock:
-    def __init__(self,earningsPerShare,WachstumsratePrc,priceEarningsRatio,name='unnamed',symbol='',boerse=''):
+    def __init__(self,growthRateAnnualyPrc,symbol=''):
 
-        # init variables
+        self.growthRateAnnualy = growthRateAnnualyPrc/100
+
+        # init variables for data, which will be loaded from yahoo finance
         self.info = None
         self.ticker = None
         self.currency = None
@@ -33,30 +38,20 @@ class Stock:
         self.bookValuePerShare = None
         self.dividend = None
         self.netIncome = None
+        self.priceEarningsRatio = None
+        self.earningsPerShare = None
 
         #
         self.mainDataLoaded = False
 
         # Exchange traing place
-        if boerse is '':
-            self.boerse = exchangeTradingPlace
+        if len(symbol.split('.')) == 2:
+            self.symbol = symbol
         else:
-            self.boerse = boerse
-
-        # initialize object
-        self.symbol = symbol + '.' + exchangeTradingPlace
-
-        # the following initialization is to be replaced in the future...
-        self.meanEarningsPerShare = self.calcMeanWeightedValue(earningsPerShare)
-        self.Wachstumsrate = 1+(WachstumsratePrc/100)
-        self.meanPriceEarningsRatio = self.calcMeanWeightedValue(priceEarningsRatio)
+            self.symbol = symbol + '.' + exchangeTradingPlace
 
         # Load data
         self.loadMainData()
-        print(self.ticker.balance_sheet)
-        print(self.ticker.financials)
-        print(self.ticker.isin)
-
 
     def loadMainData(self):
         self.getStockName()
@@ -64,32 +59,41 @@ class Stock:
         self.getCurrency()
         self.getCurrentStockValue()
         self.getEarningsPerShare()
+        self.meanEarningsPerShare = self.earningsPerShare
         self.getDividend()
-        self.getNetIncome()
+        self.getPriceEarnigsRatio()
 
         # change the flag to indicate that all data has been loaded
         self.mainDataLoaded = True
 
 
     def getTicker(self):
-        print('Creating ticker...')
+        if DEBUG:
+            print('Creating ticker...')
+
         if self.symbol is not None:
             self.ticker = yf.Ticker(self.symbol)
         else:
             raise ValueError('Stock symbol missing.')
 
-        print('Created ticker successfully')
+        if DEBUG:
+            print('Created ticker successfully')
 
 
     def getInfo(self):
-        print('Loading information...')
+        if DEBUG:
+            print('Loading information...')
+
         if self.info is not None:
             return self.info
         elif self.ticker is None:
             self.getTicker()
         
         self.info = self.ticker.info
-        print('Information loaded successfully')
+
+        if DEBUG:
+            print(self.info)
+            print('Information loaded successfully')
 
 
     def getStockName(self):
@@ -136,12 +140,24 @@ class Stock:
         if self.info is None:
             self.getInfo()
 
-        if 'trailingEps' in self.info.keys():
-            self.earningsPerShare = self.info['trailingEps']
-        elif 'forwardEps' in self.info.keys():
+        if ('forwardEps' in self.info.keys()) and (self.info['forwardEps'] is not None):
             self.earningsPerShare = self.info['forwardEps']
+        elif 'trailingEps' in self.info.keys():
+            self.earningsPerShare = self.info['trailingEps']
         else:
             raise KeyError('Missing key "trailingEps" or "forwardEps" in stock information')
+
+
+    def getPriceEarnigsRatio(self):
+        if self.info is None:
+            self.getInfo()
+
+        if ('forwardPE' in self.info.keys()) and (self.info['forwardPE'] is not None):
+            self.priceEarningsRatio = self.info['forwardPE']
+        elif 'trailingPE' in self.info.keys():
+            self.priceEarningsRatio = self.info['trailingPE']
+        else:
+            raise KeyError('Missing key "trailingPE" or "forwardPE" in stock information')
 
 
     def getDividend(self):
@@ -152,17 +168,6 @@ class Stock:
             self.dividend = self.info['dividendRate']
         else:
             raise KeyError('Missing key "dividendRate" in stock information')
-
-
-    def getNetIncome(self):
-        if self.ticker is None:
-            self.getTicker()
-
-        financials = self.ticker.financials
-        netIncome = financials.loc['Net Income']
-        lastNetIncome = netIncome[0]
-        print(lastNetIncome)
-        self.netIncome = lastNetIncome
 
 
     # Funktion zur Berechnung eines Gewichteten Mittelwerts
@@ -186,4 +191,4 @@ class Stock:
 
     # Funktion zur Formattierung der Ausgabe
     def __str__(self):
-        return '<Stock Object>'
+        return '<Stock Object \'{stockName}\'>'.format(stockName=self.name)
