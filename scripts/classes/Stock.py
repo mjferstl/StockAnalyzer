@@ -7,6 +7,11 @@ from datetime import datetime
 
 # 3rd party modules
 import yfinance as yf
+from utils.yfinance_extension import get_annualDilutedEPS
+
+
+# QuoteTimeSeriesStore
+# QuoteSummaryStore
 
 
 # ---------- VARIABLES ----------
@@ -62,6 +67,8 @@ class Stock:
         self.meanEarningsPerShare = self.earningsPerShare
         self.getDividend()
         self.getPriceEarnigsRatio()
+
+        print(get_annualDilutedEPS(self.symbol))
 
         # change the flag to indicate that all data has been loaded
         self.mainDataLoaded = True
