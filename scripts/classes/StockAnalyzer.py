@@ -73,7 +73,7 @@ class StockAnalyzer():
         if self.stock.dividend is not None:
             strDividendYield = ''
             if self.stock.currentStockValue is not None:
-                strDividendYield = ' (' + u"\u2248" + '{divYield:3.1f}%)'.format(divYield=self.stock.dividend/self.stock.currentStockValue*100)
+                strDividendYield = ' (' + u"ca. " + '{divYield:3.1f}%)'.format(divYield=self.stock.dividend/self.stock.currentStockValue*100)
             strDividend = '{str:{strFormat}}{div:6.2f}'.format(str='Dividend:',div=self.stock.dividend,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + strDividendYield + '\n'
 
         # string to print the graham number
