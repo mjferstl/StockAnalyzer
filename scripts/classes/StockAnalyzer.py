@@ -17,6 +17,10 @@ class StockAnalyzer():
     expectedReturn = 0.15
     # investment time: 10 years
     investmentHorizon = 10
+
+    #
+    useWeightedHistoricalData = True
+    weightingStep = 1
     
     def __init__(self,stock):
         if not isinstance(stock,Stock):
@@ -25,6 +29,15 @@ class StockAnalyzer():
         self.stock = stock
 
         # variables for anayzing the stock
+        # EPS
+        self.eps = None
+        self.epsWeightYears = None
+        self.calcWeightedEps()
+
+        # P/E (Price Earnings Ratio)
+        self.priceEarningsRatio = None
+        self.calcPriceEarningsRatio()
+
         self.GrahamNumber = None
         self.fairValue = None
 
@@ -32,6 +45,7 @@ class StockAnalyzer():
         if (self.stock.dividend is not None) and (self.stock.currentStockValue is not None):
             self.dividendYield = self.stock.dividend / self.stock.currentStockValue
 
+        # analyze the stock
         self.analyzeStock()
 
     
@@ -39,10 +53,17 @@ class StockAnalyzer():
         self.calcFairValue()
         self.calcGrahamNumber()
 
-    
+
     def calcGrahamNumber(self):
-        if (self.stock.earningsPerShare is not None) and (self.stock.bookValuePerShare is not None):
-            self.GrahamNumber = np.sqrt(15 * self.stock.earningsPerShare * 1.5 * self.stock.bookValuePerShare)
+        if (self.eps is not None) and (self.stock.bookValuePerShare is not None):
+            if (self.eps < 0):
+                print(' +++ EPS < 0! +++')
+                self.eps = 0
+            if (self.stock.bookValuePerShare < 0):
+                print(' +++ book value per share < 0! +++')
+                self.bookValuePerShare = 0
+                
+            self.GrahamNumber = np.sqrt(15 * self.eps * 1.5 * self.stock.bookValuePerShare)
 
 
     # Funktion zur Berechnung des sog. "inneren Wertes" der Aktie
@@ -54,7 +75,36 @@ class StockAnalyzer():
             print("growthRateAnnualy: " + str(self.stock.growthRateAnnualy))
             print("The annualy growth rate gets increased by the dividend yield of {divYield:5.2f}%. New annualy growth rate: {grwRate:5.2f}".format(divYield=self.dividendYield,grwRate=growthRateAnnualy))
 
-        self.fairValue = calcFairValue(self.stock.earningsPerShare,growthRateAnnualy,self.stock.priceEarningsRatio,StockAnalyzer.expectedReturn,StockAnalyzer.marginOfSafety,StockAnalyzer.investmentHorizon)
+        self.fairValue = calcFairValue(self.eps,growthRateAnnualy,self.stock.priceEarningsRatio,StockAnalyzer.expectedReturn,StockAnalyzer.marginOfSafety,StockAnalyzer.investmentHorizon)
+
+
+    def calcWeightedEps(self):
+        if (self.useWeightedHistoricalData) and (self.stock.earningsPerShareHistory is not None) and (len(self.stock.earningsPerShareHistory) > 1):
+            # get historical EPS data
+            epsHistory = self.stock.earningsPerShareHistory
+
+            # create weighting with the global defined stepsize
+            weighting = [1]
+            for i in range(len(epsHistory)-1):
+                weighting.append(weighting[-1]+StockAnalyzer.weightingStep)
+            weighting = list(reversed(weighting))
+
+            # calculate the weighted eps 
+            weightedEps = [factor*value for value,factor in zip(epsHistory,weighting)]
+            self.eps = sum(weightedEps)/sum(weighting)
+            self.epsWeightYears = len(epsHistory)
+        else:
+            self.eps = self.stock.earningsPerShare
+
+    
+    def calcPriceEarningsRatio(self):
+        if (self.stock.earningsPerShareHistory is not None) and (self.stock.historicalData is not None):
+            epsHistory = self.stock.earningsPerShareHistory
+            for a in epsHistory.keys():
+                print(self.stock.historicalData.loc[str(int(a[0:4])+1) + '-01-01', 'Close']/epsHistory.loc[a])
+            self.priceEarningsRatio = self.stock.priceEarningsRatio
+        else:
+            self.priceEarningsRatio = self.stock.priceEarningsRatio
 
 
     def printAnalysis(self):
@@ -75,6 +125,11 @@ class StockAnalyzer():
             if self.stock.currentStockValue is not None:
                 strDividendYield = ' (' + u"\u2248" + '{divYield:3.1f}%)'.format(divYield=self.stock.dividend/self.stock.currentStockValue*100)
             strDividend = '{str:{strFormat}}{div:6.2f}'.format(str='Dividend:',div=self.stock.dividend,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + strDividendYield + '\n'
+
+        strWeightedEps = ''
+        if (self.eps != self.stock.earningsPerShare) and (self.epsWeightYears is not None):
+            strEntry = 'weighted EPS ({years:.0f}y):'.format(years=self.epsWeightYears)
+            strWeightedEps = '{str:{strFormat}}{epsw:6.2f}'.format(str=strEntry,epsw=self.eps,years=self.epsWeightYears,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
 
         # string to print the graham number
         strGrahamNumber = ''
@@ -97,6 +152,7 @@ class StockAnalyzer():
             stockNameOutput + '\n' + \
             sepString + \
             '{str:{strFormat}}{eps:6.2f}'.format(str='EPS:',eps=self.stock.earningsPerShare,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n' + \
+            strWeightedEps + \
             '{str:{strFormat}}{priceEarningsRatio:6.2f}'.format(str='P/E:',priceEarningsRatio=self.stock.priceEarningsRatio,strFormat=stringFormat) + '\n' + \
             strDividend + \
             sepString + \

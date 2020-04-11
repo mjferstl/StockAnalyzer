@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import sys
 # ---------- MODULES ----------
 # user modules
 from classes.Stock import Stock
@@ -15,6 +15,8 @@ if __name__ == "__main__":
         symbol='ALV.DE')
     AllianzAnalysis = StockAnalyzer(Allianz)
     AllianzAnalysis.printAnalysis()
+
+    #sys.exit()
 
     # Nike 
     # Wachstumsprognoe lt. finanzen.net: 17.76% --> Corona: 8%

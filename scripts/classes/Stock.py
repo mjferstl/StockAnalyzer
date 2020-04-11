@@ -7,7 +7,7 @@ from datetime import datetime
 
 # 3rd party modules
 import yfinance as yf
-from utils.yfinance_extension import get_annualDilutedEPS
+from utils.yfinance_extension import load_EPS
 
 
 # QuoteTimeSeriesStore
@@ -45,6 +45,9 @@ class Stock:
         self.netIncome = None
         self.priceEarningsRatio = None
         self.earningsPerShare = None
+        self.earningsPerShareHistory = None
+
+        self.historicalData = None
 
         #
         self.mainDataLoaded = False
@@ -64,11 +67,12 @@ class Stock:
         self.getCurrency()
         self.getCurrentStockValue()
         self.getEarningsPerShare()
-        self.meanEarningsPerShare = self.earningsPerShare
+        self.getEpsHistory()
         self.getDividend()
         self.getPriceEarnigsRatio()
 
-        print(get_annualDilutedEPS(self.symbol))
+        # monthly historical data
+        self.historicalData = self.ticker.history(period="5y", interval = "1mo")
 
         # change the flag to indicate that all data has been loaded
         self.mainDataLoaded = True
@@ -101,6 +105,11 @@ class Stock:
         if DEBUG:
             print(self.info)
             print('Information loaded successfully')
+
+
+    def getEpsHistory(self):
+        df = load_EPS(self.symbol)
+        self.earningsPerShareHistory = df.loc['dilutedEPS']
 
 
     def getStockName(self):
