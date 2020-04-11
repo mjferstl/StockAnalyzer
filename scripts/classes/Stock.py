@@ -24,8 +24,8 @@ DEBUG = False
 exchangeTradingPlace = 'DE'
 
 # currencies
-EURO = u"\u20AC"
-DOLLAR = u"\u0024"
+EURO = u"Euro"
+DOLLAR = u"Dollar"
 
 
 # ---------- CLASSES ----------
