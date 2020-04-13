@@ -103,3 +103,12 @@ if __name__ == "__main__":
         symbol='JNJ.DE')
     JohnsonJohnsonAnalysis = StockAnalyzer(JohnsonJohnson)
     JohnsonJohnsonAnalysis.printAnalysis()
+
+
+    Aroundtown = Stock(8,symbol="AT1.DE")
+    AroundtownAnalysis = StockAnalyzer(Aroundtown)
+    AroundtownAnalysis.printAnalysis()
+
+    Vonovia = Stock(6,symbol='VNA.DE')
+    VonoviaAnalysis = StockAnalyzer(Vonovia)
+    VonoviaAnalysis.printAnalysis()

@@ -5,6 +5,7 @@ import numpy as np
 
 # custom modules
 from classes.Stock import Stock
+from classes.FinnhubAPI import FinnhubClient
 
 # ---------- CLASSES ----------
 class StockAnalyzer():
@@ -40,6 +41,7 @@ class StockAnalyzer():
 
         self.GrahamNumber = None
         self.fairValue = None
+        self.recommendations = None
 
         self.dividendYield = 0
         if (self.stock.dividend is not None) and (self.stock.currentStockValue is not None):
@@ -52,6 +54,7 @@ class StockAnalyzer():
     def analyzeStock(self):
         self.calcFairValue()
         self.calcGrahamNumber()
+        self.recommendations = self.getRecommendations()
 
 
     def calcGrahamNumber(self):
@@ -64,10 +67,17 @@ class StockAnalyzer():
                 self.bookValuePerShare = 0
                 
             self.GrahamNumber = np.sqrt(15 * self.eps * 1.5 * self.stock.bookValuePerShare)
+        else:
+            self.GrahamNumber = 0
 
 
     # Funktion zur Berechnung des sog. "inneren Wertes" der Aktie
     def calcFairValue(self):
+
+        if self.stock.growthRateAnnualy is None:
+            raise ValueError('The expected annualy growth rate for ' + self.stock.name + ' is of type None')
+        if self.stock.priceEarningsRatio is None:
+            raise ValueError('The P/E for ' + self.stock.name + ' is of type None')
 
         # calclate the new growth rate, as the dividend yield gets added
         growthRateAnnualy = self.stock.growthRateAnnualy# + self.dividendYield
@@ -79,9 +89,17 @@ class StockAnalyzer():
 
 
     def calcWeightedEps(self):
-        if (self.useWeightedHistoricalData) and (self.stock.earningsPerShareHistory is not None) and (len(self.stock.earningsPerShareHistory) > 1):
+
+        epsKey = 'dilutedEPS'
+        
+        if (self.useWeightedHistoricalData) and (self.stock.financialData is not None) and (epsKey in self.stock.financialData.index.values):
             # get historical EPS data
-            epsHistory = self.stock.earningsPerShareHistory
+            epsHistory = self.stock.financialData.loc[epsKey,:]
+
+            # remove NaN values
+            for row in epsHistory.index.values:
+                if np.isnan(epsHistory.loc[row]):
+                    epsHistory = epsHistory.drop(row)
 
             # create weighting with the global defined stepsize
             weighting = [1]
@@ -98,13 +116,15 @@ class StockAnalyzer():
 
     
     def calcPriceEarningsRatio(self):
-        if (self.stock.earningsPerShareHistory is not None) and (self.stock.historicalData is not None):
-            epsHistory = self.stock.earningsPerShareHistory
-            for a in epsHistory.keys():
-                print(self.stock.historicalData.loc[str(int(a[0:4])+1) + '-01-01', 'Close']/epsHistory.loc[a])
+        if (self.stock.financialData is not None) and ('dilutedEPS' in self.stock.financialData.index.values):
             self.priceEarningsRatio = self.stock.priceEarningsRatio
         else:
             self.priceEarningsRatio = self.stock.priceEarningsRatio
+
+
+    def getRecommendations(self):
+        recommendations = FinnhubClient(self.stock.symbol).getRecommendationsDataFrame()
+        return recommendations
 
 
     def printAnalysis(self):
@@ -129,7 +149,7 @@ class StockAnalyzer():
         strWeightedEps = ''
         if (self.eps != self.stock.earningsPerShare) and (self.epsWeightYears is not None):
             strEntry = 'weighted EPS ({years:.0f}y):'.format(years=self.epsWeightYears)
-            strWeightedEps = '{str:{strFormat}}{epsw:6.2f}'.format(str=strEntry,epsw=self.eps,years=self.epsWeightYears,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
+            strWeightedEps = '{str:{strFormat}}{epsw:6.2f}'.format(str=strEntry,epsw=self.eps,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
 
         # string to print the graham number
         strGrahamNumber = ''

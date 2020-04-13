@@ -2,17 +2,22 @@
 
 # ---------- MODULES ----------
 # standard modules
+import sys, os
 import numpy as np
 from datetime import datetime
+from pandas import DataFrame
 
 # 3rd party modules
 import yfinance as yf
+
+# custom modules
+currentFolder = os.path.dirname(os.path.abspath(__file__))
+main_path = currentFolder.replace('classes','')
+if main_path not in sys.path:
+    sys.path.append(main_path)
+
 from utils.yfinance_extension import load_EPS
-
-
-# QuoteTimeSeriesStore
-# QuoteSummaryStore
-
+from utils.generic import mergeDataFrame
 
 # ---------- VARIABLES ----------
 
@@ -21,7 +26,7 @@ DEBUG = False
 
 # default symbol for the stock exchange trading place
 # - de: XETRA
-exchangeTradingPlace = 'DE'
+defaultTradingPlace = 'DE'
 
 # currencies
 EURO = u"Euro"
@@ -30,12 +35,18 @@ DOLLAR = u"Dollar"
 
 # ---------- CLASSES ----------
 class Stock:
-    def __init__(self,growthRateAnnualyPrc,symbol=''):
+
+    # constant variables for deciding, how much data should be loaded
+    LOAD_BASIC_DATA = 1
+    LOAD_ALL_DATA = 2
+
+    def __init__(self,growthRateAnnualyPrc,symbol='',switchLoadData=LOAD_ALL_DATA,tradingPlace=''):
 
         self.growthRateAnnualy = growthRateAnnualyPrc/100
 
         # init variables for data, which will be loaded from yahoo finance
         self.info = None
+        self.name = None
         self.ticker = None
         self.currency = None
         self.currencySymbol = ''
@@ -45,7 +56,8 @@ class Stock:
         self.netIncome = None
         self.priceEarningsRatio = None
         self.earningsPerShare = None
-        self.earningsPerShareHistory = None
+
+        self.financialData = DataFrame()
 
         self.historicalData = None
 
@@ -53,13 +65,17 @@ class Stock:
         self.mainDataLoaded = False
 
         # Exchange traing place
-        if len(symbol.split('.')) == 2:
+        if ('.' in symbol) and (tradingPlace is ''):
             self.symbol = symbol
         else:
-            self.symbol = symbol + '.' + exchangeTradingPlace
+            self.symbol = symbol + '.' + defaultTradingPlace
 
         # Load data
-        self.loadMainData()
+        if switchLoadData == self.LOAD_ALL_DATA:
+            self.loadMainData()
+        elif switchLoadData == self.LOAD_BASIC_DATA:
+            self.loadBasicData()
+
 
     def loadMainData(self):
         self.getStockName()
@@ -70,12 +86,17 @@ class Stock:
         self.getEpsHistory()
         self.getDividend()
         self.getPriceEarnigsRatio()
+        self.getBalanceSheet()
+        self.getFinancials()
 
         # monthly historical data
         self.historicalData = self.ticker.history(period="5y", interval = "1mo")
 
         # change the flag to indicate that all data has been loaded
         self.mainDataLoaded = True
+
+    def loadBasicData(self):
+        self.getStockName()
 
 
     def getTicker(self):
@@ -109,17 +130,24 @@ class Stock:
 
     def getEpsHistory(self):
         df = load_EPS(self.symbol)
-        self.earningsPerShareHistory = df.loc['dilutedEPS']
+        
+        # add the data to the financialData data frame
+        self.financialData = mergeDataFrame(self.financialData,df)
 
 
     def getStockName(self):
-        if self.info is None:
-            self.getInfo()
-        
-        if 'longName' in self.info.keys():
-            self.name = self.info['longName']
+        if self.name is not None:
+            return self.name
         else:
-            raise KeyError('Missing key "longName" in stock information')
+            if self.info is None:
+                self.getInfo()
+        
+            if 'longName' in self.info.keys():
+                self.name = self.info['longName']
+            else:
+                raise KeyError('Missing key "longName" in stock information')
+
+            return self.name
 
     
     def getBookValuePerShare(self):
@@ -184,6 +212,35 @@ class Stock:
             self.dividend = self.info['dividendRate']
         else:
             raise KeyError('Missing key "dividendRate" in stock information')
+
+
+    def getBalanceSheet(self):
+        if self.ticker is None:
+            self.getTicker()
+
+        balanceSheet = self.ticker.balance_sheet
+        self.financialData = mergeDataFrame(self.financialData,balanceSheet)
+        return balanceSheet
+
+
+    def getFinancials(self):
+        if self.ticker is None:
+            self.getTicker()
+
+        financials = self.ticker.financials
+        self.financialData = mergeDataFrame(self.financialData,financials)
+        return financials
+
+
+    def getCashflow(self):
+        if self.ticker is None:
+            self.getTicker()
+
+        cashflow = self.ticker.cashflow
+        self.financialData = mergeDataFrame(self.financialData,cashflow)
+
+        return cashflow
+
 
 
     # Funktion zur Berechnung eines Gewichteten Mittelwerts
