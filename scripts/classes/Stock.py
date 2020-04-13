@@ -17,7 +17,7 @@ if main_path not in sys.path:
     sys.path.append(main_path)
 
 from utils.yfinance_extension import load_EPS
-from utils.generic import mergeDataFrame
+from utils.generic import mergeDataFrame, npDateTime64_2_str
 
 # ---------- VARIABLES ----------
 
@@ -50,22 +50,20 @@ class Stock:
         self.ticker = None
         self.currency = None
         self.currencySymbol = ''
-        self.currentStockValue = None
-        self.bookValuePerShare = None
-        self.dividend = None
-        self.netIncome = None
-        self.priceEarningsRatio = None
-        self.earningsPerShare = None
 
+        # dict and DataFrame to store all information
+        self.basicData = {}
         self.financialData = DataFrame()
 
+
         self.historicalData = None
+        self.historicalDataRelative = None
 
         #
         self.mainDataLoaded = False
 
         # Exchange traing place
-        if ('.' in symbol) and (tradingPlace is ''):
+        if ('.' in symbol) or (tradingPlace is ''):
             self.symbol = symbol
         else:
             self.symbol = symbol + '.' + defaultTradingPlace
@@ -90,13 +88,25 @@ class Stock:
         self.getFinancials()
 
         # monthly historical data
-        self.historicalData = self.ticker.history(period="5y", interval = "1mo")
+        self.historicalData = self.ticker.history(period="5y", interval = "1d")
+        self.calcRelativeHistoricalData()
 
         # change the flag to indicate that all data has been loaded
         self.mainDataLoaded = True
 
     def loadBasicData(self):
         self.getStockName()
+
+
+    def calcRelativeHistoricalData(self):
+        # take all absolute values and override them afterwards
+        self.historicalDataRelative = self.historicalData.loc[:,'Close'].copy()
+
+        firstDate = npDateTime64_2_str(self.historicalDataRelative.index.values[0])
+        firstValue = self.historicalDataRelative.loc[firstDate]
+        for row in self.historicalDataRelative.index.values:
+            date = npDateTime64_2_str(row)
+            self.historicalDataRelative.loc[date] = self.historicalDataRelative.loc[date]/firstValue*100           
 
 
     def getTicker(self):
@@ -153,7 +163,13 @@ class Stock:
     def getBookValuePerShare(self):
         if self.info is None:
             self.getInfo()
-        self.bookValuePerShare = self.info['bookValue']
+
+        if 'bookValue' in self.info.keys():
+            bookValue = self.info['bookValue']
+            self.basicData['bookValuePerShare'] = bookValue
+            return bookValue
+        else:
+            raise KeyError('Missing Key "bookValue"')
 
     
     def getCurrency(self):
@@ -172,44 +188,64 @@ class Stock:
 
     
     def getCurrentStockValue(self):
-        if self.ticker is None:
-            self.getTicker()
+        if self.info is None:
+            self.getInfo()
 
-        lastDayData = self.ticker.history(period='1d')
-        closeValue = lastDayData.iloc[0]['Close']
-        self.currentStockValue = closeValue
+        if 'regularMarketPrice' in self.info.keys():
+            marketPrice = self.info['regularMarketPrice']
+            self.currentStockValue = marketPrice
+            self.basicData['marketPrice'] = marketPrice
+            return marketPrice
+        else:
+            raise KeyError('Missing key "regularMarketPrice"')
 
     
     def getEarningsPerShare(self):
         if self.info is None:
             self.getInfo()
 
+        eps = 0
+        if ('trailingEps' in self.info.keys()) and (self.info['trailingEps'] is not None):
+            eps = self.info['trailingEps']
+            self.basicData['EPS'] = eps
+
         if ('forwardEps' in self.info.keys()) and (self.info['forwardEps'] is not None):
-            self.earningsPerShare = self.info['forwardEps']
-        elif 'trailingEps' in self.info.keys():
-            self.earningsPerShare = self.info['trailingEps']
-        else:
+            eps = self.info['forwardEps']
+            self.basicData['EPS'] = eps
+            
+        if 'EPS' not in self.basicData.keys():
             raise KeyError('Missing key "trailingEps" or "forwardEps" in stock information')
+
+        return eps
 
 
     def getPriceEarnigsRatio(self):
         if self.info is None:
             self.getInfo()
 
+        priceEarningsRatio = 0
+        if 'trailingPE' in self.info.keys() and (self.info['trailingPE'] is not None):
+            priceEarningsRatio = self.info['trailingPE']
+            self.basicData['P/E'] = priceEarningsRatio
+
         if ('forwardPE' in self.info.keys()) and (self.info['forwardPE'] is not None):
-            self.priceEarningsRatio = self.info['forwardPE']
-        elif 'trailingPE' in self.info.keys():
-            self.priceEarningsRatio = self.info['trailingPE']
-        else:
+            priceEarningsRatio = self.info['forwardPE']
+            self.basicData['P/E'] = priceEarningsRatio
+
+        if 'P/E' not in self.basicData.keys():
             raise KeyError('Missing key "trailingPE" or "forwardPE" in stock information')
+
+        return priceEarningsRatio
 
 
     def getDividend(self):
         if self.info is None:
             self.getInfo()
 
-        if 'dividendRate' in self.info.keys():
-            self.dividend = self.info['dividendRate']
+        if ('dividendRate' in self.info.keys()) and (self.info['dividendRate'] is not None):
+            dividend = self.info['dividendRate']
+            self.basicData['dividend'] = dividend
+            return dividend
         else:
             raise KeyError('Missing key "dividendRate" in stock information')
 
@@ -240,6 +276,13 @@ class Stock:
         self.financialData = mergeDataFrame(self.financialData,cashflow)
 
         return cashflow
+
+
+    def getBasicDataItem(self,keyName):
+        return self.basicData[keyName]
+
+    def isItemInBasicData(self,keyName):
+        return keyName in self.basicData.keys()
 
 
 

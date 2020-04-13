@@ -44,8 +44,6 @@ class StockAnalyzer():
         self.recommendations = None
 
         self.dividendYield = 0
-        if (self.stock.dividend is not None) and (self.stock.currentStockValue is not None):
-            self.dividendYield = self.stock.dividend / self.stock.currentStockValue
 
         # analyze the stock
         self.analyzeStock()
@@ -58,15 +56,15 @@ class StockAnalyzer():
 
 
     def calcGrahamNumber(self):
-        if (self.eps is not None) and (self.stock.bookValuePerShare is not None):
+        if (self.eps is not None) and (self.stock.isItemInBasicData('bookValuePerShare')):
+
             if (self.eps < 0):
                 print(' +++ EPS < 0! +++')
                 self.eps = 0
-            if (self.stock.bookValuePerShare < 0):
+            if (self.stock.getBasicDataItem('bookValuePerShare') < 0):
                 print(' +++ book value per share < 0! +++')
-                self.bookValuePerShare = 0
                 
-            self.GrahamNumber = np.sqrt(15 * self.eps * 1.5 * self.stock.bookValuePerShare)
+            self.GrahamNumber = np.sqrt(15 * self.eps * 1.5 * self.stock.getBasicDataItem('bookValuePerShare'))
         else:
             self.GrahamNumber = 0
 
@@ -76,8 +74,8 @@ class StockAnalyzer():
 
         if self.stock.growthRateAnnualy is None:
             raise ValueError('The expected annualy growth rate for ' + self.stock.name + ' is of type None')
-        if self.stock.priceEarningsRatio is None:
-            raise ValueError('The P/E for ' + self.stock.name + ' is of type None')
+        if not self.stock.isItemInBasicData('P/E'):
+            raise KeyError('The P/E for ' + self.stock.name + ' is not existant')
 
         # calclate the new growth rate, as the dividend yield gets added
         growthRateAnnualy = self.stock.growthRateAnnualy# + self.dividendYield
@@ -85,7 +83,7 @@ class StockAnalyzer():
             print("growthRateAnnualy: " + str(self.stock.growthRateAnnualy))
             print("The annualy growth rate gets increased by the dividend yield of {divYield:5.2f}%. New annualy growth rate: {grwRate:5.2f}".format(divYield=self.dividendYield,grwRate=growthRateAnnualy))
 
-        self.fairValue = calcFairValue(self.eps,growthRateAnnualy,self.stock.priceEarningsRatio,StockAnalyzer.expectedReturn,StockAnalyzer.marginOfSafety,StockAnalyzer.investmentHorizon)
+        self.fairValue = calcFairValue(self.eps,growthRateAnnualy,self.stock.getBasicDataItem('P/E'),StockAnalyzer.expectedReturn,StockAnalyzer.marginOfSafety,StockAnalyzer.investmentHorizon)
 
 
     def calcWeightedEps(self):
@@ -112,14 +110,14 @@ class StockAnalyzer():
             self.eps = sum(weightedEps)/sum(weighting)
             self.epsWeightYears = len(epsHistory)
         else:
-            self.eps = self.stock.earningsPerShare
+            self.eps = self.stock.getBasicDataItem('EPS')
 
     
     def calcPriceEarningsRatio(self):
         if (self.stock.financialData is not None) and ('dilutedEPS' in self.stock.financialData.index.values):
-            self.priceEarningsRatio = self.stock.priceEarningsRatio
+            self.priceEarningsRatio = self.stock.getBasicDataItem('P/E')
         else:
-            self.priceEarningsRatio = self.stock.priceEarningsRatio
+            self.priceEarningsRatio = self.stock.getBasicDataItem('P/E')
 
 
     def getRecommendations(self):
@@ -128,6 +126,9 @@ class StockAnalyzer():
 
 
     def printAnalysis(self):
+
+        if self.priceEarningsRatio is None:
+            self.calcPriceEarningsRatio()
 
         # variables for formatting the console output
         stringFormat = "24s"
@@ -140,14 +141,14 @@ class StockAnalyzer():
 
         # string to print the dividend and the dividend yield
         strDividend = ''
-        if self.stock.dividend is not None:
+        if self.stock.isItemInBasicData('dividend'):
             strDividendYield = ''
             if self.stock.currentStockValue is not None:
-                strDividendYield = ' (' + u"ca. " + '{divYield:3.1f}%)'.format(divYield=self.stock.dividend/self.stock.currentStockValue*100)
-            strDividend = '{str:{strFormat}}{div:6.2f}'.format(str='Dividend:',div=self.stock.dividend,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + strDividendYield + '\n'
+                strDividendYield = ' (' + u"ca. " + '{divYield:3.1f}%)'.format(divYield=self.stock.getBasicDataItem('dividend')/self.stock.currentStockValue*100)
+            strDividend = '{str:{strFormat}}{div:6.2f}'.format(str='Dividend:',div=self.stock.getBasicDataItem('dividend'),strFormat=stringFormat) + ' ' + self.stock.currencySymbol + strDividendYield + '\n'
 
         strWeightedEps = ''
-        if (self.eps != self.stock.earningsPerShare) and (self.epsWeightYears is not None):
+        if (self.eps != self.stock.getBasicDataItem('EPS')) and (self.epsWeightYears is not None):
             strEntry = 'weighted EPS ({years:.0f}y):'.format(years=self.epsWeightYears)
             strWeightedEps = '{str:{strFormat}}{epsw:6.2f}'.format(str=strEntry,epsw=self.eps,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
 
@@ -171,9 +172,9 @@ class StockAnalyzer():
         string2Print = sepString + \
             stockNameOutput + '\n' + \
             sepString + \
-            '{str:{strFormat}}{eps:6.2f}'.format(str='EPS:',eps=self.stock.earningsPerShare,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n' + \
+            '{str:{strFormat}}{eps:6.2f}'.format(str='EPS:',eps=self.stock.getBasicDataItem('EPS'),strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n' + \
             strWeightedEps + \
-            '{str:{strFormat}}{priceEarningsRatio:6.2f}'.format(str='P/E:',priceEarningsRatio=self.stock.priceEarningsRatio,strFormat=stringFormat) + '\n' + \
+            '{str:{strFormat}}{priceEarningsRatio:6.2f}'.format(str='P/E:',priceEarningsRatio=self.priceEarningsRatio,strFormat=stringFormat) + '\n' + \
             strDividend + \
             sepString + \
             'Analysis:\n' + \

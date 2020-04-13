@@ -8,7 +8,7 @@ from classes.StockAnalyzer import StockAnalyzer
 
 symbol = 'MSFT'
 
-stock = Stock(6,symbol,tradingPlace='')
+stock = Stock(6,symbol)
 StockAnalyzer(stock).printAnalysis()
 
 msftCompare = StockCompare(symbol)

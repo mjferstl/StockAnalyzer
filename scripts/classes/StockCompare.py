@@ -173,7 +173,7 @@ class StockComparePDF():
 
             cell_text = []
             for row in recommendations.index.values:
-                cellRow = recommendations.loc[row]
+                cellRow = recommendations.loc[row].copy()
                 cellRow.loc['Date'] = row
                 cellRow.drop(labels=['symbol'])
                 index = ['Date']

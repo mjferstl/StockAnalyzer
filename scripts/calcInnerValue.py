@@ -67,14 +67,6 @@ if __name__ == "__main__":
     ShellAnalysis = StockAnalyzer(Shell)
     ShellAnalysis.printAnalysis()
 
-    # # Continental
-    # # Wachstumrate lt. finanten.net (21.03.2020): 5.4% --> Corona: 4% (langfristig)
-    # # priceEarningsRatio für 2019 mit 0 angenommen
-    # Continental = Stock(4,\
-    #     symbol='CON.DE')
-    # ContinentalAnalysis = StockAnalyzer(Continental)
-    # ContinentalAnalysis.printAnalysis()
-
     # Microsoft
     # Wacchstumsrate lt. finanzen.net (21.03.2020): 17.02% --> 10% 
     Microsoft = Stock(10,\
