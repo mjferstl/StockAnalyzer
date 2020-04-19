@@ -26,82 +26,85 @@ class StockCompare():
         if isinstance(stockSymbol,Stock):
             self.stock = stockSymbol
         else:
-            self.stock = Stock(6,stockSymbol,tradingPlace='',switchLoadData=Stock.LOAD_ALL_DATA)
+            self.stock = Stock(symbol=stockSymbol,tradingPlace='',switchLoadData=Stock.LOAD_ALL_DATA)
 
         self.peerDataFrame = None
 
 
-    def getPeerGroupComparison(self,extraPeers=[]):
+    def getPeerGroup(self,symbol,extraPeers=[]):
 
         print('Loading data for peer group\nthis will take a moment...')
 
         # load the peer group
-        peerGroup = FinnhubClient(self.stock.symbol).getPeerGroup()
-
-        # create empty data frames for storing stock values
-        df,dfPrc = DataFrame(), DataFrame()
+        peerGroup = FinnhubClient(symbol).getPeerGroup()
 
         # remove the stock from the peer group list 
-        peerGroup.remove(self.stock.symbol)
-        peerGroup.insert(0,self.stock.symbol)
+        peerGroup.remove(symbol)
+        peerGroup.insert(0,symbol)
 
         # add extra peers selected by the user
         if len(extraPeers) > 0:
             for index,symbol in enumerate(extraPeers):
                 peerGroup.insert(index+1,symbol)
-        print(self.stock.symbol + ' peer group: ' + str(peerGroup))
+        print(symbol + ' peer group: ' + str(peerGroup))
 
-        firstDate = ''
-        for peer in peerGroup:
-            # get the name of the stock
-            # skip it, if the data could not be loaded successfully
-            try:
-                legendName = self.createLegendName(peer)
-            except KeyError:
-                print(' +++ Error while loading "{symbol:s}"\n     Skipping this stock...\n'.format(symbol=peer))
-                continue
+        # load data for all peers
+        peerStockList = []
+        for iPeer,peer in enumerate(peerGroup):
+            # print the status to the console
+            print(str(int(iPeer*1.0/len(peerGroup)*100)) + "% - " + peer)
 
             # load the data from yahoo finance
-            peerData = data.DataReader(peer,'yahoo')
+            try:
+                peerStock = Stock(peer)
 
-            if firstDate is '':
-                firstDate = npDateTime64_2_str(peerData.index.values[0])
+                # add the stock to the list
+                peerStockList.append(peerStock)
+            except Exception:
+                print('Could not load data for ' + peer)
+        print('100%')
 
-            # add the daily values to the data frame
-            for date,value in zip(peerData.index.values,peerData.loc[:,'Adj Close']):
-                df.loc[date,peer] = value
+        return peerStockList
 
-            # get the value of the first entry to calculate the relative growth
-            firstValue = df.loc[firstDate,peer]
+    def getPeerGroupChangePrc(self,stockList):
 
-            # add the relative growth if the data is not NaN
-            if not np.isnan(firstValue):
-                # append the relative growth for every day to the data frame
-                for date,value in zip(peerData.index.values,peerData.loc[:,'Adj Close']):
-                    d = npDateTime64_2_str(date)
-                    dfPrc.loc[d,legendName] = value/firstValue
+        # create an empty data frame
+        df = DataFrame()
 
-        self.peerDataFrame = dfPrc
-        return dfPrc
+        referenceDate = npDateTime64_2_str(stockList[0].historicalData.index.values[0])
 
+        for stock in stockList:
+            stockSymbol = stock.symbol
 
-    def createPDF(self,peerDataFrame=None):
+            # check if the stock's values start at the same date
+            # otherwise no comparison is made
+            if (referenceDate in npDateTime64_2_str(stock.historicalData.index.values)):
+                # get the stock's value at the reference date
+                referenceValue = stock.historicalData.loc[referenceDate,'Close']
+            
+                # loop over all historical stock values and calculate the 
+                # stock's value change in percent
+                for date, value in zip(stock.historicalData.index.values, stock.historicalData.loc[:,'Close']):
+                    if not np.isnan(value):
+                        d = npDateTime64_2_str(date)
+                        df.loc[d,stockSymbol] = value/referenceValue*100.0
 
-        # get the data frame
-        # if no data frame is submitted, then try to get it from the object
-        if peerDataFrame is None:
-            peerDataFrame = self.peerDataFrame
+        return df
 
-        # if the data frame is still None, then raise an exception
-        if peerDataFrame is None:
-            raise ValueError('DataFrame missing')
+    def comparePeerGoupMainValues(self,stockList):
+        df = DataFrame()
 
-        stockAnalysis = StockAnalyzer(self.stock)
-        StockComparePDF(peerDataFrame,stockAnalysis).createPDF(self.stock.symbol + '_peer_group_comparison.pdf')
+        attributesList = [Stock.PE_RATIO, Stock.EARNINGS_PER_SHARE, Stock.BOOK_VALUE_PER_SHARE, \
+            Stock.DIVIDEND, Stock.DIVIDEND_YIELD]
+        for stock in stockList:
+            for attribute in attributesList:
+                df.loc[attribute,stock.symbol] = stock.getBasicDataItem(attribute)
+
+        return df
 
 
     def createLegendName(self,symbol):
-        stock = Stock(0,symbol,switchLoadData=Stock.LOAD_BASIC_DATA,tradingPlace='')
+        stock = Stock(symbol=symbol,switchLoadData=Stock.LOAD_BASIC_DATA,tradingPlace='')
         stockName = stock.getStockName()
         return '{symbol:s} ({fullname:s})'.format(symbol=symbol,fullname=stockName)
 
@@ -109,62 +112,96 @@ class StockCompare():
 
 class StockComparePDF():
 
-    def __init__(self,dataFrame,stockAnalysis=None):
+    FONTSIZE = 8
 
-        # check if the argument is of the right type
-        if not isinstance(dataFrame,DataFrame):
-            raise TypeError('Object ' + str(dataFrame) + ' is no instance of class pandas.DataFrame')
-
-        # store the data frame
-        self.dataFrame = dataFrame
-
-        self.stockAnalysis = stockAnalysis
-
-
-    def createPDF(self,filename):
+    def __init__(self,filename):
 
         # PDF erstellen
         if filename[-4:-1] not in ['.PDF','.pdf']:
             filename = filename + '.pdf'
 
-        pdf = PdfPages(filename)
-        FigureSize = (16.3*2 / 2.58, 13.2*2 / 2.58)
+        self.filename = filename
+        self.pdf = PdfPages(filename)
+
+
+    def addPlot(self,dataFrame,legendPos='upper left',xlabel='Date',ylabel='value',title='',ticksX=True,gridMajor=True,gridMinor=True,FontSize=None):
+
+        if FontSize is None:
+            FontSize = self.FONTSIZE
+
+        #FigureSize = (16.3*2 / 2.58, 13.2*2 / 2.58)
         PlotColors = ['tab:blue', 'tab:red', 'tab:green', 'tab:orange',
                     'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray',
                     'tab:olive', 'tab:cyan']
-        FontSize = 8
-        params = []
-        mpl.rcParams['axes.linewidth'] = 0.7
-        mpl.rcParams['xtick.labelsize'] = 8
-        mpl.rcParams['ytick.labelsize'] = 8
 
-        # add a plot comparing the stock's value growth in percent 
-        # compared to the stocks of the peer group
+        mpl.rcParams['axes.linewidth'] = 0.7
+        mpl.rcParams['xtick.labelsize'] = FontSize
+        mpl.rcParams['ytick.labelsize'] = FontSize
+
+        # add a plot
         fig, ax = plt.subplots()
 
-        for columnName in self.dataFrame.columns.values:
-            ax.plot(self.dataFrame.loc[:,columnName]*100, label=columnName)
-            
+        for columnName in dataFrame.columns.values:
+            ax.plot(dataFrame.loc[:,columnName], label=columnName)
+
         # legend
         ax.legend(loc='upper left')
 
-        # x ticks for the first day of every year
-        xticks = [self.dataFrame.index.values[0]]
-        for index in self.dataFrame.index.values:
-            if index[0:4] != xticks[-1][0:4]:
-                xticks.append(index)
+        if ticksX:
+            # x ticks for the first day of every year
+            xticks = [dataFrame.index.values[0]]
+            for index in dataFrame.index.values:
+                if index[0:4] != xticks[-1][0:4]:
+                    xticks.append(index)
 
-        plt.xticks(xticks) 
-        plt.grid(which='major')
-        plt.grid(b=True, which='minor', color='r', linestyle='--')
-        plt.xlabel('Date')
-        plt.ylabel('stock value growth in percent')
-        plt.title('')
+            plt.xticks(xticks)
+
+        if gridMajor:
+            plt.grid(which='major')
+
+        if gridMinor:
+            plt.grid(b=True, which='minor', color='r', linestyle='--')
+
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.title(title)
 
         fig.tight_layout()
-        pdf.savefig()
+        self.pdf.savefig()
         fig.clf()
-        
+
+
+    def addTable(self,dataFrame,FontSize=None):
+
+        if FontSize is None:
+            FontSize = self.FONTSIZE
+
+        cellText = []
+        for row in dataFrame.index.values:
+            cellRow = dataFrame.loc[row].copy()
+
+            # substitute NaN values with '-'
+            for index,item in enumerate(cellRow):
+                if np.isnan(item):
+                    cellRow.iloc[index] = '-'
+
+            cellText.append(cellRow)
+
+        plt.table(cellText=cellText, colLabels=cellRow.index, loc='upper left', FontSize=FontSize, rowLabels=dataFrame.index.values)
+        plt.axis('off')
+        self.pdf.savefig()
+
+
+    def closePDF(self):
+        try:
+            self.pdf.close()
+            print(self.filename + ' wurde erstellt!')
+        except:
+            print(self.filename + ' konnte nicht erstellt werden')
+
+
+    def createPDFDEPREACHED(self,filename):
+
         # Add a table containings the recommendations for the stock
         if self.stockAnalysis is not None:
             recommendations = self.stockAnalysis.getRecommendations()
@@ -194,6 +231,3 @@ class StockComparePDF():
             plt.table(cellText=cell_text, colLabels=cellRow.index, loc='upper left', FontSize=8)
             plt.axis('off')
             pdf.savefig()
-
-        pdf.close()
-        print('PDF mit Ergebnissen wurde erstellt!')

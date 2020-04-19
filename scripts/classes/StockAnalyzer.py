@@ -143,9 +143,11 @@ class StockAnalyzer():
         strDividend = ''
         if self.stock.isItemInBasicData('dividend'):
             strDividendYield = ''
-            if self.stock.currentStockValue is not None:
-                strDividendYield = ' (' + u"ca. " + '{divYield:3.1f}%)'.format(divYield=self.stock.getBasicDataItem('dividend')/self.stock.currentStockValue*100)
-            strDividend = '{str:{strFormat}}{div:6.2f}'.format(str='Dividend:',div=self.stock.getBasicDataItem('dividend'),strFormat=stringFormat) + ' ' + self.stock.currencySymbol + strDividendYield + '\n'
+
+            stockPrice = self.stock.getBasicDataItem(Stock.MARKET_PRICE)
+            if stockPrice is not None:
+                strDividendYield = ' (' + u"ca. " + '{divYield:3.1f}%)'.format(divYield=self.stock.getBasicDataItem(Stock.DIVIDEND)/stockPrice*100)
+            strDividend = '{str:{strFormat}}{div:6.2f}'.format(str='Dividend:',div=self.stock.getBasicDataItem(Stock.DIVIDEND),strFormat=stringFormat) + ' ' + self.stock.currencySymbol + strDividendYield + '\n'
 
         strWeightedEps = ''
         if (self.eps != self.stock.getBasicDataItem('EPS')) and (self.epsWeightYears is not None):
@@ -159,8 +161,9 @@ class StockAnalyzer():
 
         # string to print the stock's current value
         strCurrentStockValue = ''
-        if (self.stock.currentStockValue is not None):
-            strCurrentStockValue = '{str:{strFormat}}{val:6.2f}'.format(str="current value:",val=self.stock.currentStockValue,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
+        stockPrice = self.stock.getBasicDataItem(Stock.MARKET_PRICE)
+        if (stockPrice is not None):
+            strCurrentStockValue = '{str:{strFormat}}{val:6.2f}'.format(str="current value:",val=stockPrice,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
 
 
         # format margin around stock name

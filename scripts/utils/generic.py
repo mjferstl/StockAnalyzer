@@ -6,12 +6,18 @@ from datetime import datetime
 
 
 def npDateTime64_2_datetime(npDatetime64):
-    ts = (npDatetime64 - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
-    return datetime.utcfromtimestamp(ts)
+    if isinstance(npDatetime64,list) or isinstance(npDatetime64,np.ndarray):
+        return [npDateTime64_2_datetime(dt) for dt in npDatetime64]
+    elif isinstance(npDatetime64,np.datetime64):
+        ts = (npDatetime64 - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
+        return datetime.utcfromtimestamp(ts)
 
 
 def npDateTime64_2_str(npDatetime64,format='%Y-%m-%d'):
-    return npDateTime64_2_datetime(npDatetime64).strftime(format)
+    if isinstance(npDatetime64,list) or isinstance(npDatetime64,np.ndarray):
+        return [npDateTime64_2_datetime(dt).strftime(format) for dt in npDatetime64]
+    else:
+        return npDateTime64_2_datetime(npDatetime64).strftime(format)
 
 
 def mergeDataFrame(dataFrame1,dataFrame2):

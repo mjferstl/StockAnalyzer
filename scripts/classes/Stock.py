@@ -40,7 +40,16 @@ class Stock:
     LOAD_BASIC_DATA = 1
     LOAD_ALL_DATA = 2
 
-    def __init__(self,growthRateAnnualyPrc,symbol='',switchLoadData=LOAD_ALL_DATA,tradingPlace=''):
+    # variables
+    PE_RATIO = 'P/E'
+    BOOK_VALUE_PER_SHARE = 'bookValuePerShare'
+    EARNINGS_PER_SHARE = 'EPS'
+    MARKET_PRICE = 'marketPrice'
+    DIVIDEND = 'dividend'
+    DIVIDEND_YIELD = 'dividendYield'
+
+
+    def __init__(self,symbol='',growthRateAnnualyPrc=0,switchLoadData=LOAD_ALL_DATA,tradingPlace=''):
 
         self.growthRateAnnualy = growthRateAnnualyPrc/100
 
@@ -88,8 +97,8 @@ class Stock:
         self.getFinancials()
 
         # monthly historical data
-        self.historicalData = self.ticker.history(period="5y", interval = "1d")
-        self.calcRelativeHistoricalData()
+        self.historicalData = self.ticker.history(period="5y", interval = "1wk")
+        #self.calcRelativeHistoricalData()
 
         # change the flag to indicate that all data has been loaded
         self.mainDataLoaded = True
@@ -165,11 +174,11 @@ class Stock:
             self.getInfo()
 
         if 'bookValue' in self.info.keys():
-            bookValue = self.info['bookValue']
-            self.basicData['bookValuePerShare'] = bookValue
-            return bookValue
+            self.basicData[self.BOOK_VALUE_PER_SHARE] = self.info['bookValue']
         else:
             raise KeyError('Missing Key "bookValue"')
+
+        return self.basicData[self.BOOK_VALUE_PER_SHARE]
 
     
     def getCurrency(self):
@@ -191,63 +200,70 @@ class Stock:
         if self.info is None:
             self.getInfo()
 
-        if 'regularMarketPrice' in self.info.keys():
-            marketPrice = self.info['regularMarketPrice']
-            self.currentStockValue = marketPrice
-            self.basicData['marketPrice'] = marketPrice
-            return marketPrice
+        key = 'regularMarketPrice'
+        if key in self.info.keys():
+            self.basicData[self.MARKET_PRICE] = self.info[key]
         else:
-            raise KeyError('Missing key "regularMarketPrice"')
+            raise KeyError('Missing key "%s"' %(key))
+
+        return self.basicData[self.MARKET_PRICE]
 
     
     def getEarningsPerShare(self):
         if self.info is None:
             self.getInfo()
 
-        eps = 0
-        if ('trailingEps' in self.info.keys()) and (self.info['trailingEps'] is not None):
-            eps = self.info['trailingEps']
-            self.basicData['EPS'] = eps
+        if ('trailingEps' in self.info.keys()):
+            self.basicData[self.EARNINGS_PER_SHARE] = self.info['trailingEps']
 
-        if ('forwardEps' in self.info.keys()) and (self.info['forwardEps'] is not None):
-            eps = self.info['forwardEps']
-            self.basicData['EPS'] = eps
+        if ('forwardEps' in self.info.keys()):
+            self.basicData[self.EARNINGS_PER_SHARE] = self.info['forwardEps']
             
-        if 'EPS' not in self.basicData.keys():
+        if self.EARNINGS_PER_SHARE not in self.basicData.keys():
             raise KeyError('Missing key "trailingEps" or "forwardEps" in stock information')
 
-        return eps
+        return self.basicData[self.EARNINGS_PER_SHARE]
 
 
     def getPriceEarnigsRatio(self):
         if self.info is None:
             self.getInfo()
 
-        priceEarningsRatio = 0
-        if 'trailingPE' in self.info.keys() and (self.info['trailingPE'] is not None):
-            priceEarningsRatio = self.info['trailingPE']
-            self.basicData['P/E'] = priceEarningsRatio
+        if 'trailingPE' in self.info.keys():
+            self.basicData[self.PE_RATIO] = self.info['trailingPE']
 
-        if ('forwardPE' in self.info.keys()) and (self.info['forwardPE'] is not None):
-            priceEarningsRatio = self.info['forwardPE']
-            self.basicData['P/E'] = priceEarningsRatio
+        if ('forwardPE' in self.info.keys()):
+            self.basicData[self.PE_RATIO] = self.info['forwardPE']
 
-        if 'P/E' not in self.basicData.keys():
+        if self.PE_RATIO not in self.basicData.keys():
             raise KeyError('Missing key "trailingPE" or "forwardPE" in stock information')
 
-        return priceEarningsRatio
+        return self.basicData[self.PE_RATIO]
 
 
     def getDividend(self):
         if self.info is None:
             self.getInfo()
 
-        if ('dividendRate' in self.info.keys()) and (self.info['dividendRate'] is not None):
-            dividend = self.info['dividendRate']
-            self.basicData['dividend'] = dividend
-            return dividend
+        dividend = 0
+        if ('dividendRate' in self.info.keys()):
+            if (self.info['dividendRate'] is None):
+                dividend = 0
+            else:
+                dividend = self.info['dividendRate'] 
         else:
             raise KeyError('Missing key "dividendRate" in stock information')
+
+        # store dividend in basic stock data dict
+        self.basicData[self.DIVIDEND] = dividend
+        
+        # calculate the dividend yield for the current market price
+        if not self.isItemInBasicData(self.MARKET_PRICE):
+            self.getCurrentStockValue()
+
+        self.basicData[self.DIVIDEND_YIELD] = dividend/self.getBasicDataItem(self.MARKET_PRICE)
+
+        return self.basicData[self.DIVIDEND]
 
 
     def getBalanceSheet(self):
