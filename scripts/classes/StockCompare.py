@@ -6,7 +6,7 @@ from pandas import DataFrame
 import numpy as np
 
 # 3rd party modules
-from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.backends.backend_pdf import PdfPages, PdfFile
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib as mpl
@@ -92,13 +92,43 @@ class StockCompare():
         return df
 
     def comparePeerGoupMainValues(self,stockList):
+
+        # create an empty data frame
         df = DataFrame()
 
-        attributesList = [Stock.PE_RATIO, Stock.EARNINGS_PER_SHARE, Stock.BOOK_VALUE_PER_SHARE, \
-            Stock.DIVIDEND, Stock.DIVIDEND_YIELD]
+        # list of all attributes for the table
+        attributesList = [Stock.MARKET_PRICE, Stock.PE_RATIO, Stock.EARNINGS_PER_SHARE, \
+            Stock.BOOK_VALUE_PER_SHARE, Stock.DIVIDEND, Stock.DIVIDEND_YIELD]
+        
+        # add all attributes with their values for every stock to the data frame
         for stock in stockList:
+            df.loc['Name',stock.symbol] = stock.name
+
+            # analyze the stock
+            stockAnalysis = StockAnalyzer(stock)
+
+            # add all attributes to the data frame
             for attribute in attributesList:
                 df.loc[attribute,stock.symbol] = stock.getBasicDataItem(attribute)
+                if attribute == Stock.EARNINGS_PER_SHARE:
+                    meanEps, years = stockAnalysis.getMeanWeightedEPS()
+                    df.loc['avg. ' + Stock.EARNINGS_PER_SHARE,stock.symbol] = '{eps:.2f} ({y:.0f}y)'.format(eps=meanEps,y=years)
+            
+            # add analysis data
+            df.loc['fair value',stock.symbol] = stockAnalysis.getFairValue()
+            df.loc['Graham number',stock.symbol] = stockAnalysis.getGrahamNumber()
+
+            # add recommendations
+            latestRecommendation = stockAnalysis.getLatestRecommendations()
+            formatString = '{v:.0f} ({prc:.0f}%)'
+            numRecommendations = sum(latestRecommendation)
+            for rec in ['strongBuy','buy','hold','sell','strongSell']:
+                df.loc['latest ' + rec,stock.symbol] = formatString.format(v=latestRecommendation[rec],prc=latestRecommendation[rec]/numRecommendations*100)
+
+            #ax = latestRecommendation[['strongBuy','buy','hold','sell','strongSell']].plot(kind='bar', title ="buy", legend=True, fontsize=12)
+            #ax.set_xlabel("a", fontsize=12)
+            #ax.set_ylabel("b", fontsize=12)
+            #plt.show()
 
         return df
 
@@ -112,12 +142,18 @@ class StockCompare():
 
 class StockComparePDF():
 
-    FONTSIZE = 8
+    # size in pt
+    FONTSIZE = 12
+
+    # default figure size in inches
+    # DIN A4
+    FIGURE_WIDTH = 29.7/2.54
+    FIGURE_HEIGHT = 21.0/2.54
 
     def __init__(self,filename):
 
         # PDF erstellen
-        if filename[-4:-1] not in ['.PDF','.pdf']:
+        if filename[-4:] not in ['.PDF','.pdf']:
             filename = filename + '.pdf'
 
         self.filename = filename
@@ -126,23 +162,23 @@ class StockComparePDF():
 
     def addPlot(self,dataFrame,legendPos='upper left',xlabel='Date',ylabel='value',title='',ticksX=True,gridMajor=True,gridMinor=True,FontSize=None):
 
+        # define fontsize
         if FontSize is None:
             FontSize = self.FONTSIZE
 
-        #FigureSize = (16.3*2 / 2.58, 13.2*2 / 2.58)
-        PlotColors = ['tab:blue', 'tab:red', 'tab:green', 'tab:orange',
-                    'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray',
-                    'tab:olive', 'tab:cyan']
-
+        # linewidth for the axes
         mpl.rcParams['axes.linewidth'] = 0.7
-        mpl.rcParams['xtick.labelsize'] = FontSize
-        mpl.rcParams['ytick.labelsize'] = FontSize
+
+        # labels are 70% of the fontsize
+        mpl.rcParams['xtick.labelsize'] = int(FontSize*0.7)
+        mpl.rcParams['ytick.labelsize'] = int(FontSize*0.7)
 
         # add a plot
         fig, ax = plt.subplots()
 
-        for columnName in dataFrame.columns.values:
-            ax.plot(dataFrame.loc[:,columnName], label=columnName)
+        colormap = plt.get_cmap('tab10')
+        for index,columnName in enumerate(dataFrame.columns.values):
+            ax.plot(dataFrame.loc[:,columnName], label=columnName, color=colormap(index))
 
         # legend
         ax.legend(loc='upper left')
@@ -167,6 +203,10 @@ class StockComparePDF():
         plt.title(title)
 
         fig.tight_layout()
+
+        fig = plt.gcf()
+        fig.set_size_inches(self.FIGURE_WIDTH, self.FIGURE_HEIGHT)
+
         self.pdf.savefig()
         fig.clf()
 
@@ -174,22 +214,54 @@ class StockComparePDF():
     def addTable(self,dataFrame,FontSize=None):
 
         if FontSize is None:
-            FontSize = self.FONTSIZE
+            FontSize = self.FONTSIZE #int(self.FONTSIZE*0.7)
 
         cellText = []
         for row in dataFrame.index.values:
             cellRow = dataFrame.loc[row].copy()
 
-            # substitute NaN values with '-'
+            # formatting
             for index,item in enumerate(cellRow):
-                if np.isnan(item):
+                # substitute NaN values with '-'
+                if (not isinstance(item,str)) and np.isnan(item):
                     cellRow.iloc[index] = '-'
+                # format float values
+                elif isinstance(item,float) or isinstance(item,int):
+                    cellRow.iloc[index] = '{val:.2f}'.format(val=item)
 
             cellText.append(cellRow)
 
+        # print the table to the document
         plt.table(cellText=cellText, colLabels=cellRow.index, loc='upper left', FontSize=FontSize, rowLabels=dataFrame.index.values)
         plt.axis('off')
+
+        # adjust size of the figure and the page
+        fig = plt.gcf()
+        fig.set_size_inches(self.FIGURE_WIDTH, self.FIGURE_HEIGHT)
+
+        fig.tight_layout()
+
         self.pdf.savefig()
+
+    def addBarChart(self,dataFrame,FontSize=None):
+
+        if FontSize is None:
+            FontSize = self.FONTSIZE
+
+        # add a plot
+        fig, ax = plt.subplots()
+        
+        # plot data frame
+        dataFrame.plot(kind='bar', title ="buy", legend=True, fontsize=FontSize)
+        ax.set_xlabel("a", fontsize=12)
+        ax.set_ylabel("b", fontsize=12)
+        plt.xticks(rotation=45)
+
+        fig = plt.gcf()
+        fig.set_size_inches(self.FIGURE_WIDTH, self.FIGURE_HEIGHT)
+
+        self.pdf.savefig()
+        fig.clf()
 
 
     def closePDF(self):
@@ -198,36 +270,3 @@ class StockComparePDF():
             print(self.filename + ' wurde erstellt!')
         except:
             print(self.filename + ' konnte nicht erstellt werden')
-
-
-    def createPDFDEPREACHED(self,filename):
-
-        # Add a table containings the recommendations for the stock
-        if self.stockAnalysis is not None:
-            recommendations = self.stockAnalysis.getRecommendations()
-
-            fig, ax = plt.subplots()
-
-            cell_text = []
-            for row in recommendations.index.values:
-                cellRow = recommendations.loc[row].copy()
-                cellRow.loc['Date'] = row
-                cellRow.drop(labels=['symbol'])
-                index = ['Date']
-
-                # change all float values to int values
-                for i in cellRow.index:
-                    if isinstance(cellRow[i],float):
-                        floatValue = cellRow[i]
-                        cellRow[i] = int(floatValue)
-
-                for i in cellRow.index:
-                    if i is not 'Date':
-                        index.append(i) 
-
-                cellRow = cellRow.reindex(index = index)
-                cell_text.append(cellRow)
-
-            plt.table(cellText=cell_text, colLabels=cellRow.index, loc='upper left', FontSize=8)
-            plt.axis('off')
-            pdf.savefig()

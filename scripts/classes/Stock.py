@@ -18,6 +18,7 @@ if main_path not in sys.path:
 
 from utils.yfinance_extension import load_EPS
 from utils.generic import mergeDataFrame, npDateTime64_2_str
+from classes.FinnhubAPI import FinnhubClient
 
 # ---------- VARIABLES ----------
 
@@ -35,6 +36,12 @@ DOLLAR = u"Dollar"
 
 # ---------- CLASSES ----------
 class Stock:
+
+    """
+        TODO: growth rate anhand einer regressionsgerade beim EPS berechnen (falls plausibel?)
+        TODO: growth rate anhand einer regressionsgerade beim Cashflow berechnen (falls plausibel?)
+        TODO: plotten der strongBuy, buy, hold, sell und strongSell empfehlungen (auch aus mehreren Quellen, z.B. yahoo finance, Finnhub, ...)
+    """
 
     # constant variables for deciding, how much data should be loaded
     LOAD_BASIC_DATA = 1
@@ -68,8 +75,9 @@ class Stock:
         self.historicalData = None
         self.historicalDataRelative = None
 
-        #
-        self.mainDataLoaded = False
+        # storing recommendations for buying, holding and selling
+        self.recommendations = None
+
 
         # Exchange traing place
         if ('.' in symbol) or (tradingPlace is ''):
@@ -95,13 +103,11 @@ class Stock:
         self.getPriceEarnigsRatio()
         self.getBalanceSheet()
         self.getFinancials()
+        self.getRecommendations()
 
         # monthly historical data
         self.historicalData = self.ticker.history(period="5y", interval = "1wk")
-        #self.calcRelativeHistoricalData()
 
-        # change the flag to indicate that all data has been loaded
-        self.mainDataLoaded = True
 
     def loadBasicData(self):
         self.getStockName()
@@ -216,7 +222,8 @@ class Stock:
         if ('trailingEps' in self.info.keys()):
             self.basicData[self.EARNINGS_PER_SHARE] = self.info['trailingEps']
 
-        if ('forwardEps' in self.info.keys()):
+        # use the forward value if it is not None
+        if ('forwardEps' in self.info.keys()) and (self.info['forwardEps'] is not None):
             self.basicData[self.EARNINGS_PER_SHARE] = self.info['forwardEps']
             
         if self.EARNINGS_PER_SHARE not in self.basicData.keys():
@@ -232,7 +239,8 @@ class Stock:
         if 'trailingPE' in self.info.keys():
             self.basicData[self.PE_RATIO] = self.info['trailingPE']
 
-        if ('forwardPE' in self.info.keys()):
+        # use the forward value, if it is not None
+        if ('forwardPE' in self.info.keys()) and (self.info['forwardPE'] is not None):
             self.basicData[self.PE_RATIO] = self.info['forwardPE']
 
         if self.PE_RATIO not in self.basicData.keys():
@@ -257,11 +265,11 @@ class Stock:
         # store dividend in basic stock data dict
         self.basicData[self.DIVIDEND] = dividend
         
-        # calculate the dividend yield for the current market price
+        # calculate the dividend yield for the current market price in Percent
         if not self.isItemInBasicData(self.MARKET_PRICE):
             self.getCurrentStockValue()
 
-        self.basicData[self.DIVIDEND_YIELD] = dividend/self.getBasicDataItem(self.MARKET_PRICE)
+        self.basicData[self.DIVIDEND_YIELD] = dividend/self.getBasicDataItem(self.MARKET_PRICE)*100
 
         return self.basicData[self.DIVIDEND]
 
@@ -299,6 +307,12 @@ class Stock:
 
     def isItemInBasicData(self,keyName):
         return keyName in self.basicData.keys()
+
+
+    def getRecommendations(self):
+        recommendations = FinnhubClient(self.symbol).getRecommendationsDataFrame()
+        self.recommendations = recommendations
+        return recommendations
 
 
 

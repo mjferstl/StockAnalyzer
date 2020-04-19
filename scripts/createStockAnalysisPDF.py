@@ -18,8 +18,7 @@ mainValueCompareDF = msftCompare.comparePeerGoupMainValues(peerGroupList)
 
 pdf_filename = symbol + '_peer_group_compare.pdf'
 scPDF = StockComparePDF(pdf_filename)
-scPDF.addPlot(df)
-
+scPDF.addPlot(df,xlabel='Date',ylabel='stock value growth in %',title=symbol + ' - Peer group comparison')
 scPDF.addTable(mainValueCompareDF)
 
 scPDF.closePDF()
