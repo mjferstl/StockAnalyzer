@@ -2,6 +2,7 @@
 # ---------- MODULES ----------
 # standard modules
 import numpy as np
+from sklearn.linear_model import LinearRegression 
 
 # custom modules
 from classes.Stock import Stock
@@ -52,6 +53,7 @@ class StockAnalyzer():
     def analyzeStock(self):
         self.getFairValue()
         self.calcGrahamNumber()
+        self.calcNPV()
         self.recommendations = self.getRecommendations()
 
 
@@ -75,6 +77,23 @@ class StockAnalyzer():
         else:
             self.GrahamNumber = 0
 
+    def calcNPV(self):
+        CF = self.stock.financialData.loc['freeCashFlow',:]
+        CF.fillna(CF.mean(), inplace=True) # TODO: NaN Werte werden durch Mittelwert ersetzt
+        CF_y = np.array(CF.values)
+        CF_x = np.array(range(CF.size))
+        CF_x = CF_x.reshape(-1, 1)
+        model = LinearRegression()
+        model.fit(CF_x, CF_y)
+        growth = model.coef_ / CF_y[-1] *100 # cashflow growth in percent
+        i = 10 # discount in percent
+        PV = 0
+        for index in range(self.investmentHorizon):
+            CF_t = CF_y[-1]*pow(1+growth/100,index)
+            product = pow(1+i/100,index+1)
+            PV_t = CF_t / product
+            PV += PV_t
+        self.NPV = (PV - self.stock.keyStatistics["marketCap"])/self.stock.keyStatistics["sharesOutstanding"]
 
     # Funktion zur Berechnung des sog. "inneren Wertes" der Aktie
     def getFairValue(self):
@@ -185,6 +204,11 @@ class StockAnalyzer():
         if self.GrahamNumber is not None:
             strGrahamNumber = '{str:{strFormat}}{gn:6.2f}'.format(str='Graham number:',gn=self.GrahamNumber,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
 
+        strNetPresentValue = ''
+        if self.NPV is not None:
+            strNetPresentValue = '{str:{strFormat}}{gn:6.2f}'.format(str='NetPresentValue:',gn=self.NPV[0],strFormat=stringFormat) + \
+            ' ' + self.stock.currencySymbol + ' (positiv:good)\n'
+
         # string to print the stock's current value
         strCurrentStockValue = ''
         stockPrice = self.stock.getBasicDataItem(Stock.MARKET_PRICE)
@@ -212,6 +236,7 @@ class StockAnalyzer():
             '\n' + \
             '{str:{strFormat}}{val:6.2f}'.format(str="Fair value:",val=self.fairValue,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n' + \
             strGrahamNumber + \
+            strNetPresentValue + \
             strCurrentStockValue + \
             sepString + '\n'
 

@@ -16,3 +16,4 @@ requests==2.23.0
 six==1.14.0
 urllib3==1.25.8
 yfinance==0.1.54
+sklearn==0.0

@@ -49,6 +49,53 @@ def load_EPS(symbol):
 
     return df
 
+def load_CashFlow(symbol):
+    url = "https://finance.yahoo.com/quote/" + symbol + "/cash-flow?p=" + symbol
+
+    freecashflowDict = {}
+    html = _requests.get(url=url).text
+
+    json_str = html.split('root.App.main =')[1].split(
+        '(this)')[0].split(';\n}')[0].strip()
+    
+    if "QuoteTimeSeries" in html:
+        freeCashFlowList = _json.loads(json_str)['context']['dispatcher']['stores']['QuoteTimeSeriesStore']['timeSeries']['annualFreeCashFlow']
+
+        for freecashflow in freeCashFlowList:
+            if freecashflow is not None:
+                freecashflowDict[freecashflow['asOfDate']] = freecashflow['reportedValue']['raw']
+
+    # sort dicts in descending order, from newest to oldest
+    freecasflowDictSorted = sortDictDescending(freecashflowDict)
+
+    # create an empty pandas data frame
+    df = DataFrame()
+
+    # add diluted eps data
+    for k,v in freecasflowDictSorted.items():
+        df.loc['freeCashFlow', k] = v
+
+    return df
+
+def load_KeyStatistics(symbol):
+    url = "https://finance.yahoo.com/quote/" + symbol + "/key-statistics?p=" + symbol
+
+    sharesOutstanding = None
+    html = _requests.get(url=url).text
+
+    json_str = html.split('root.App.main =')[1].split(
+        '(this)')[0].split(';\n}')[0].strip()
+    
+    if "QuoteSummaryStore" in html:
+        sharesOutstanding = _json.loads(json_str)['context']['dispatcher']['stores']['QuoteSummaryStore']['defaultKeyStatistics']['sharesOutstanding']['raw']
+        marketCap = _json.loads(json_str)['context']['dispatcher']['stores']['QuoteSummaryStore']['price']['marketCap']['raw']
+
+    # create an empty pandas data frame
+    keyStatisticDict =	{
+        "sharesOutstanding": sharesOutstanding,
+        "marketCap": marketCap
+    }
+    return keyStatisticDict
 
 def sortDictDescending(dictionary):
     return dict(reversed(sorted(dictionary.items())))

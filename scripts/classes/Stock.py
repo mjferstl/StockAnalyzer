@@ -16,7 +16,7 @@ main_path = currentFolder.replace('classes','')
 if main_path not in sys.path:
     sys.path.append(main_path)
 
-from utils.yfinance_extension import load_EPS
+from utils.yfinance_extension import load_EPS, load_CashFlow, load_KeyStatistics
 from utils.generic import mergeDataFrame, npDateTime64_2_str
 from classes.FinnhubAPI import FinnhubClient
 
@@ -69,6 +69,7 @@ class Stock:
 
         # dict and DataFrame to store all information
         self.basicData = {}
+        self.keyStatistics = {}
         self.financialData = DataFrame()
 
 
@@ -104,6 +105,8 @@ class Stock:
         self.getBalanceSheet()
         self.getFinancials()
         self.getRecommendations()
+        self.getCashflow()
+        self.getKeyStatistics()
 
         # monthly historical data
         self.historicalData = self.ticker.history(period="5y", interval = "1wk")
@@ -299,7 +302,17 @@ class Stock:
         cashflow = self.ticker.cashflow
         self.financialData = mergeDataFrame(self.financialData,cashflow)
 
+        # extension
+        df = load_CashFlow(self.symbol)
+        # add the data to the financialData data frame
+        self.financialData = mergeDataFrame(self.financialData,df)
         return cashflow
+    
+    def getKeyStatistics(self):
+        if self.ticker is None:
+            self.getTicker()
+        # extension
+        self.keyStatistics = load_KeyStatistics(self.symbol)
 
 
     def getBasicDataItem(self,keyName):
