@@ -63,7 +63,6 @@ class StockAnalyzer():
 
         return self.GrahamNumber
 
-
     def calcGrahamNumber(self):
         if (self.meanWeightedEps is not None) and (self.stock.isItemInBasicData(Stock.BOOK_VALUE_PER_SHARE)):
 
@@ -94,6 +93,93 @@ class StockAnalyzer():
             PV_t = CF_t / product
             PV += PV_t
         self.NPV = (PV - self.stock.keyStatistics["marketCap"])/self.stock.keyStatistics["sharesOutstanding"]
+
+    def calcLevermannScore(self):
+        # TODO calcLevermannScore implementieren
+        # RoE Eigenkapitalrendite (Gewinn / Eigenkapital)
+        # RoE > 20% -> +1, 10% < RoE < 20% -> 0, RoE < 10% -> -1
+
+        # EBIT-Marge (EBIT / Umsatz)
+        # EBIT-Marge > 12% -> +1, 6% < EBIT-Marge < 12% -> 0, EBIT-Marge < 6% -> -1
+        
+        # EKQ Eigenkapitalquote
+        # EKQ > 25% -> +1, 15% < EKQ < 25% -> 0, EKQ < 15% -> -1
+
+        # KGV aktuelles Jahr
+        # 0 < KGV < 12 -> +1, 12 < KGV < 16 -> 0, KGV < 0, KGV > 16 -> -1
+
+        # KGV 5 Jahre (letzten 3 Jahre, aktuelles Jahr, nächstes Jahr)
+        # 0 < KGV < 12 -> +1, 12 < KGV < 16 -> 0, KGV < 0, KGV > 16 -> -1
+
+        # Mittelwert Analystenmeinung (Kaufen=1, Halten=2, Verkaufen=3)
+        # 2,5 < Mittelwert -> +1, 1,5 < Mittelwert < 2,5 -> 0, Mittelwert < 1,5
+        
+        # Reaktion auf Quartalszahlen
+        # ?
+
+        # Gewinnrevisionen
+        #
+        
+        # Kursverlauf der letzten 6 Monate
+        #
+
+        # Kursverlauf der letzten 12 Monate
+        #
+
+        # Kursmomentum
+        #
+
+        # Reversaleffekt
+        #
+
+        # Gewinnwachstum
+        #
+
+        # optinal: Marktkapitalisierung
+        #
+
+        # optional: Branche
+        # 
+
+        # Gesamt Bewertung:
+        # Kaufen: Large Caps >= 4 Punkte; Small und Mid >= 7 Punkte
+        # Halten: Large Caps >= 3 Punkte; Small und Mid >= 5-6 Punkte
+        # Verkaufen: Large Caps >= 2 Punkte; Small und Mid >= 4 Punkte
+        pass
+    
+    def calcPiotroskiFScore(self):
+        # TODO calcPiotroskiFScore implementieren
+        # Nettogewinn
+        #
+        # Operating Cashflow
+        #
+        # Gesamtkapitalrendite
+        #
+        # Operating Cashflow versus Nettogewinn
+        #
+        # Verschuldungsgrad
+        #
+        # Liquidität 3. Grades
+        #
+        # Aktienanzahl
+        #
+        # Rohmarge
+        #
+        # Kapitalumschlag
+        #
+        # Gesamtbewertung
+        # Hoch: 7-9P, Mittel: 3-6P, Niedrig: 0-2P
+        pass
+
+    def calcTechnicalIndicator(self):
+        # TODO calcTechincalIndicator implementieren
+        # GD 200 Linie
+        # Historische Werte
+        # MACD
+        # Bewertung: 3 von 3 positiv -> kaufen
+        # Bewertung: 3 von 3 negativ -> verkaufen
+        # Bewertung: 0-2 von 3 -> halten
+        pass
 
     # Funktion zur Berechnung des sog. "inneren Wertes" der Aktie
     def getFairValue(self):
