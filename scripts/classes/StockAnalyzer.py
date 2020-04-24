@@ -2,7 +2,6 @@
 # ---------- MODULES ----------
 # standard modules
 import numpy as np
-from sklearn.linear_model import LinearRegression 
 
 # custom modules
 from classes.Stock import Stock
@@ -16,7 +15,8 @@ class StockAnalyzer():
     # margin of safety: 20% --> 0.20
     marginOfSafety = 0.2
     # expected return (exprectedReturn): 15% --> 0.15
-    expectedReturn = 0.15
+    expectedReturnPrc = 10
+    expectedReturn = expectedReturnPrc/100
     # investment time: 10 years
     investmentHorizon = 10
 
@@ -76,23 +76,51 @@ class StockAnalyzer():
         else:
             self.GrahamNumber = 0
 
+
     def calcNPV(self):
+        # Free Chashflow der letzten Jahre
         CF = self.stock.financialData.loc['freeCashFlow',:]
+
         CF.fillna(CF.mean(), inplace=True) # TODO: NaN Werte werden durch Mittelwert ersetzt
-        CF_y = np.array(CF.values)
-        CF_x = np.array(range(CF.size))
-        CF_x = CF_x.reshape(-1, 1)
-        model = LinearRegression()
-        model.fit(CF_x, CF_y)
-        growth = model.coef_ / CF_y[-1] *100 # cashflow growth in percent
-        i = 10 # discount in percent
-        PV = 0
-        for index in range(self.investmentHorizon):
-            CF_t = CF_y[-1]*pow(1+growth/100,index)
-            product = pow(1+i/100,index+1)
-            PV_t = CF_t / product
-            PV += PV_t
-        self.NPV = (PV - self.stock.keyStatistics["marketCap"])/self.stock.keyStatistics["sharesOutstanding"]
+
+        # Sortierung in aufsteigender Reihenfolge (alt -> neu)
+        dates = CF.index.values
+        dates.sort()
+        CF_sorted = [CF.loc[date] for date in dates]
+
+        # mittleres Wachstum des Cashflows der letzten Jahre
+        growthAbs, growthPrc = [], []
+        for y in range(1,len(CF_sorted)):
+            # absolutes Wachstum des Cashflows
+            growthAbs.append(CF_sorted[y]-CF_sorted[y-1])
+            # relatives Wachstum des Cashflows in Prozent
+            growthPrc.append(growthAbs[-1]/CF_sorted[y-1]*100)
+        
+        # mittleres relatives Wachstum
+        #print('growthPrc: ' + str(growthPrc))
+        meanGrowthPrc = sum(growthPrc)/len(growthPrc)
+        print('mittleres Cashflow-Wachstum der letzten {years:.0f} Jahre: {cfGrowth:.2f}%'.format(years=len(CF_sorted),cfGrowth=meanGrowthPrc))
+
+        discountRate = self.expectedReturn # discount in percent
+        presentValue = [] # present value
+        # Scheife ueber alle zu betrachtenden Jahre
+        for year in range(1,self.investmentHorizon+1):
+            # Geldwert des zukuenftigen Cashflow fuer ein bestimmtes Jahr in der Zukunft
+            CF_t = CF_sorted[-1]*pow(1+meanGrowthPrc/100,year)
+            #print('Jahr: ' + str(year) + ', Cashflow: ' + str(CF_t))
+
+            # "present value" des cashflows in der Zukunft
+            PV_t = CF_t / pow(1+discountRate,year)
+
+            # Aufsummierung des "present values" fuer den Betrachtungszeitraum
+            presentValue.append(PV_t)
+
+        # Summe der, auf den aktuellen Zeitpunkt bezogenen, zukuenfitgen Cashflows
+        presentValue = sum(presentValue)
+        #print(PV)
+
+        self.NPV = (presentValue - self.stock.keyStatistics["marketCap"])/self.stock.keyStatistics["sharesOutstanding"]
+
 
     def calcLevermannScore(self):
         # TODO calcLevermannScore implementieren
@@ -292,8 +320,12 @@ class StockAnalyzer():
 
         strNetPresentValue = ''
         if self.NPV is not None:
-            strNetPresentValue = '{str:{strFormat}}{gn:6.2f}'.format(str='NetPresentValue:',gn=self.NPV[0],strFormat=stringFormat) + \
-            ' ' + self.stock.currencySymbol + ' (positiv:good)\n'
+            if self.NPV > 0:
+                strNPVcomment = 'time to invest!'
+            else:
+                strNPVcomment = 'too expensive...'
+            strNetPresentValue = '{str:{strFormat}}{gn:6.2f}'.format(str='NetPresentValue:',gn=self.NPV,strFormat=stringFormat) + \
+                ' ' + self.stock.currencySymbol + ' (' + strNPVcomment + ')\n'
 
         # string to print the stock's current value
         strCurrentStockValue = ''
@@ -319,6 +351,7 @@ class StockAnalyzer():
             'Analysis:\n' + \
             ' - margin of safety: {marginOfSafety:2.0f}%\n'.format(marginOfSafety=StockAnalyzer.marginOfSafety*100) + \
             ' - exp. growth rate: {expGrwRate:2.0f}%\n'.format(expGrwRate=StockAnalyzer.expectedReturn*100) + \
+            ' - investment horizon: {years:.0f} years\n'.format(years=self.investmentHorizon) + \
             '\n' + \
             '{str:{strFormat}}{val:6.2f}'.format(str="Fair value:",val=self.fairValue,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n' + \
             strGrahamNumber + \
