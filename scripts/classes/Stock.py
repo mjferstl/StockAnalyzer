@@ -48,6 +48,9 @@ class Stock:
         TODO: growth rate anhand einer regressionsgerade beim EPS berechnen (falls plausibel?)
         TODO: growth rate anhand einer regressionsgerade beim Cashflow berechnen (falls plausibel?)
         TODO: plotten der strongBuy, buy, hold, sell und strongSell empfehlungen (auch aus mehreren Quellen, z.B. yahoo finance, Finnhub, ...)
+        TODO: Settings Datei entwerfen; Standardisierte Felder (zukünftiges CF Wachstum, zuküngtiges Gewinnwachstum) und einen Freitext, \
+            dort koennen manuelle Infos oder Hinweise eingetragen werden. Pro Aktie ein File; bei Analysen wird immer der pessimistischste Wert \
+            aus Analysten | eigene Meinung | extrapolierte Werte herangezogen 
     """
 
     # constant variables for deciding, how much data should be loaded
