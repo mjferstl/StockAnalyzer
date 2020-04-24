@@ -2,10 +2,14 @@
 # ---------- MODULES ----------
 # standard modules
 import numpy as np
+import pandas as pd
+
+import datetime
 
 # custom modules
 from classes.Stock import Stock
 from classes.FinnhubAPI import FinnhubClient
+from utils.generic import npDateTime64_2_str
 
 # ---------- CLASSES ----------
 class StockAnalyzer():
@@ -54,6 +58,7 @@ class StockAnalyzer():
         self.getFairValue()
         self.calcGrahamNumber()
         self.calcNPV()
+        self.calcLevermannScore()
         self.recommendations = self.getRecommendations()
 
 
@@ -79,12 +84,12 @@ class StockAnalyzer():
 
     def calcNPV(self):
         # Free Chashflow der letzten Jahre
-        CF = self.stock.financialData.loc['freeCashFlow',:]
+        CF = self.stock.financialData.loc['freeCashFlow',:].copy()
 
         CF.fillna(CF.mean(), inplace=True) # TODO: NaN Werte werden durch Mittelwert ersetzt
 
         # Sortierung in aufsteigender Reihenfolge (alt -> neu)
-        dates = CF.index.values
+        dates = CF.index.values.copy() # copy ist hier wichtig, da sonst der urspruegliche DataFrame falsch geordnet wird
         dates.sort()
         CF_sorted = [CF.loc[date] for date in dates]
 
@@ -124,20 +129,101 @@ class StockAnalyzer():
 
     def calcLevermannScore(self):
         # TODO calcLevermannScore implementieren
+        LevermannScore = 0
+        #print(self.stock.financialData)
+
         # RoE Eigenkapitalrendite (Gewinn / Eigenkapital)
+        # Eigenkapital
+        EK = list(self.stock.financialData.loc['Total Stockholder Equity',:].copy())
+        # TODO Klärung ob "Net Income" (abzgl. Steuern etc.) oder "Operating Income" (Steuern noch nicht abgezogen)
+        Gewinn = list(self.stock.financialData.loc['Net Income',:].copy())
+
+        # RoE fuer jedes Jahr
+        annualyRoE = [gewinn/ek*100 for gewinn,ek in zip(Gewinn,EK)]
+        # RoE Mittelwert ueber die Jahre
+        RoE = sum(annualyRoE)/len(annualyRoE)
+
         # RoE > 20% -> +1, 10% < RoE < 20% -> 0, RoE < 10% -> -1
+        if (RoE > 20):
+            LevermannScore += 1
+        elif (RoE < 10):
+            LevermannScore -= 1
 
         # EBIT-Marge (EBIT / Umsatz)
-        # EBIT-Marge > 12% -> +1, 6% < EBIT-Marge < 12% -> 0, EBIT-Marge < 6% -> -1
         
+        # EBIT
+        EBIT = list(self.stock.financialData.loc['Ebit',:].copy())
+        # Umsatz
+        Gesamtumsatz = list(self.stock.financialData.loc['Total Revenue',:].copy())
+
+        # EBIT-Marge der letzten Jahre und Mittelwert
+        annualyEbitMarge = [ebit/umsatz*100 for ebit,umsatz in zip(EBIT,Gesamtumsatz)]
+        EbitMarge = sum(annualyEbitMarge)/len(annualyEbitMarge)
+
+        # EBIT-Marge > 12% -> +1, 6% < EBIT-Marge < 12% -> 0, EBIT-Marge < 6% -> -1
+        if (EbitMarge > 12):
+            LevermannScore += 1
+        elif (EbitMarge < 6):
+            LevermannScore -= 1
+
         # EKQ Eigenkapitalquote
+        # Eigenkapital (schon vorhanden, da bei RoE verwendet)
+        # Gesamtverbindlichkeiten + Eigenkapital
+        GK = list(self.stock.financialData.loc['Total Assets',:].copy())
+
+        # Eigenkapitalquote
+        annualyEKratio = [ek/gk*100 for ek,gk in zip(EK,GK)]
+        EKratio = sum(annualyEKratio)/len(annualyEKratio)
+
         # EKQ > 25% -> +1, 15% < EKQ < 25% -> 0, EKQ < 15% -> -1
+        if (EKratio > 25):
+            LevermannScore += 1
+        elif (EKratio < 15):
+            LevermannScore -= 1
 
         # KGV aktuelles Jahr
+        # 
+        KGV = self.stock.getBasicDataItem(Stock.PE_RATIO)
+        
         # 0 < KGV < 12 -> +1, 12 < KGV < 16 -> 0, KGV < 0, KGV > 16 -> -1
+        if (KGV < 12):
+            LevermannScore += 1
+        elif (KGV > 16):
+            LevermannScore -= 1
 
         # KGV 5 Jahre (letzten 3 Jahre, aktuelles Jahr, nächstes Jahr)
+        EPSdf = self.stock.financialData.loc['dilutedEPS',:].copy()
+        EPS = list(EPSdf)
+
+        dates = EPSdf.index.values.copy()
+        kurse = []
+        for d in dates:
+            recordDates = npDateTime64_2_str(self.stock.historicalData.index.values)
+            # finde ein passendes Datum
+            if d not in recordDates:
+                for i in range(1,30):
+                    newLastDate = datetime.datetime.strptime(d,'%Y-%m-%d') + datetime.timedelta(days=1)
+                    d = datetime.datetime.strftime(newLastDate,'%Y-%m-%d')
+                    if d in recordDates:
+                        break
+            kurse.append(self.stock.historicalData.loc[d,'Close'])
+        #print(kurse)
+        kgv_past = [k/e for e,k in zip(EPS,kurse)]
+        print('KGV letzte Jahre: ' + str(kgv_past))
+        KGV_5y = kgv_past[0:3] # letzte 3 Jahre
+        KGV_5y.reverse()
+        KGV_5y.append(KGV) # aktuelles Jahr 
+        print(KGV_5y)
+        # TODO naechstes Jahr schaetzen und zur Liste hinzufuegen
+
+        # Mittelwert 
+        KGV_5y_avg = sum(KGV_5y)/len(KGV_5y)
+
         # 0 < KGV < 12 -> +1, 12 < KGV < 16 -> 0, KGV < 0, KGV > 16 -> -1
+        if (KGV_5y_avg < 12):
+            LevermannScore += 1
+        elif (KGV_5y_avg > 16):
+            LevermannScore -= 1
 
         # Mittelwert Analystenmeinung (Kaufen=1, Halten=2, Verkaufen=3)
         # 2,5 < Mittelwert -> +1, 1,5 < Mittelwert < 2,5 -> 0, Mittelwert < 1,5
@@ -169,6 +255,7 @@ class StockAnalyzer():
         # optional: Branche
         # 
 
+        print('Levermann Score: ' + str(LevermannScore))
         # Gesamt Bewertung:
         # Kaufen: Large Caps >= 4 Punkte; Small und Mid >= 7 Punkte
         # Halten: Large Caps >= 3 Punkte; Small und Mid >= 5-6 Punkte
@@ -241,7 +328,7 @@ class StockAnalyzer():
         
         if (self.stock.financialData is not None) and (epsKey in self.stock.financialData.index.values):
             # get historical EPS data
-            epsHistory = self.stock.financialData.loc[epsKey,:]
+            epsHistory = self.stock.financialData.loc[epsKey,:].copy()
 
             # remove NaN values
             for row in epsHistory.index.values:

@@ -6,6 +6,7 @@ import sys, os
 import numpy as np
 from datetime import datetime
 from pandas import DataFrame
+import pandas as pd
 
 # 3rd party modules
 import yfinance as yf
@@ -21,6 +22,12 @@ from utils.generic import mergeDataFrame, npDateTime64_2_str
 from classes.FinnhubAPI import FinnhubClient
 
 # ---------- VARIABLES ----------
+
+# Einstellungen, damit Pandas DataFrames immer vollstaendig geplotted werden
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', None)
 
 # DEV-VARIABLES
 DEBUG = False
@@ -161,6 +168,7 @@ class Stock:
         
         # add the data to the financialData data frame
         self.financialData = mergeDataFrame(self.financialData,df)
+        return df
 
 
     def getStockName(self):
@@ -291,7 +299,9 @@ class Stock:
             self.getTicker()
 
         financials = self.ticker.financials
+        
         self.financialData = mergeDataFrame(self.financialData,financials)
+        
         return financials
 
 
@@ -311,12 +321,15 @@ class Stock:
     def getKeyStatistics(self):
         if self.ticker is None:
             self.getTicker()
+            
         # extension
         self.keyStatistics = load_KeyStatistics(self.symbol)
+        return self.keyStatistics
 
 
     def getBasicDataItem(self,keyName):
         return self.basicData[keyName]
+
 
     def isItemInBasicData(self,keyName):
         return keyName in self.basicData.keys()
