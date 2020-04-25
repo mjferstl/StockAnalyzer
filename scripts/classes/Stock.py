@@ -5,6 +5,7 @@
 import sys, os
 import numpy as np
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from pandas import DataFrame
 import pandas as pd
 
@@ -81,7 +82,8 @@ class Stock:
         self.basicData = {}
         self.keyStatistics = {}
         self.financialData = DataFrame()
-
+        # DataFrame for storing estimates for the future
+        self.estimates = DataFrame()
 
         self.historicalData = None
         self.historicalDataRelative = None
@@ -117,6 +119,7 @@ class Stock:
         self.getRecommendations()
         self.getCashflow()
         self.getKeyStatistics()
+        self.getEstimates()
 
         # monthly historical data
         self.historicalData = self.ticker.history(period="5y", interval = "1wk")
@@ -329,6 +332,24 @@ class Stock:
         self.keyStatistics = load_KeyStatistics(self.symbol)
         return self.keyStatistics
 
+    
+    def getEstimates(self):
+        epsEstimates = FinnhubClient(self.symbol).getEpsEstimates()
+
+        df = DataFrame()
+        for data in epsEstimates:
+            eps = data['epsAvg']
+            period = data['period']
+            df.loc[self.EARNINGS_PER_SHARE,period] = eps
+
+        # descending order of date column
+        df = df.reindex(sorted(df.columns,reverse=True), axis=1)
+
+        # add data frame to estimates data frame
+        self.estimates = mergeDataFrame(self.estimates,df)
+
+        return df
+
 
     def getBasicDataItem(self,keyName):
         return self.basicData[keyName]
@@ -343,6 +364,22 @@ class Stock:
         self.recommendations = recommendations
         return recommendations
 
+
+    def getHistoricalStockPrice(self,startDate,endDate=None):
+
+        # Start date
+        start = datetime.strptime(startDate,'%Y-%m-%d') + relativedelta(days=1)
+        startDate = start.strftime('%Y-%m-%d')
+
+        # End date
+        if endDate is None:
+            end = start + relativedelta(days=1)
+        else:
+            end = datetime.strptime(endDate,'%Y-%m-%d') + relativedelta(days=1)
+        endDate = end.strftime('%Y-%m-%d')
+
+        # Load data from yahoo finance
+        return yf.download(self.symbol,start=startDate,end=endDate)
 
 
     # Funktion zur Berechnung eines Gewichteten Mittelwerts
@@ -367,3 +404,41 @@ class Stock:
     # Funktion zur Formattierung der Ausgabe
     def __str__(self):
         return '<Stock Object \'{stockName}\'>'.format(stockName=self.name)
+
+
+
+
+class StockIndex():
+
+    # Index Symbols
+    DOW_JONES_INDEX_SYMBOL = '^DJI'
+    DAX_INDEX_SYMBOL = '^GDAXI'
+
+    def __init__(self,indexSymbol):
+
+        self.symbol = indexSymbol
+        self.ticker = yf.Ticker(indexSymbol)
+
+        self.historicalData = None
+
+        self.loadHistoricalData()
+
+    def loadHistoricalData(self,startDate=None,endDate=None):
+
+        if (startDate is None) and (endDate is None):
+            return self.ticker.history(period="5y", interval = "1wk")
+        else:
+            if (startDate is None) and (endDate is not None):
+                raise ValueError('Missing startDate. You passed endDate=' + str(endDate) + ' but no startDate')
+            elif (startDate is not None) and (endDate is None):
+                end = datetime.strptime(startDate)+1
+                endDate = end.strftime('%Y-%m-%d')
+            
+            # add one day to start and end, to get the correct intervall
+            start = datetime.strptime(startDate,'%Y-%m-%d') + relativedelta(days=1)
+            startDate = start.strftime('%Y-%m-%d')
+            end = datetime.strptime(endDate,'%Y-%m-%d') + relativedelta(days=1)
+            endDate = end.strftime('%Y-%m-%d')
+
+            # load data from yahoo finance
+            return yf.download(self.symbol, start=startDate, end=endDate)

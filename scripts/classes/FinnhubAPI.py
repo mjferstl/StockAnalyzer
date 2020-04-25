@@ -76,3 +76,10 @@ class FinnhubClient():
 
         # return the data frame
         return df
+
+    def getEpsEstimates(self):
+        r = requests.get('https://finnhub.io/api/v1/stock/eps-estimate?symbol=' + self.symbol + '&freq=annual&token=' + self.APIkey)
+        if r.ok:
+            return r.json()['data']
+        else:
+            return ''
