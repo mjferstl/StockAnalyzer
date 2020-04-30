@@ -65,6 +65,11 @@ class Stock:
     MARKET_PRICE = 'marketPrice'
     DIVIDEND = 'dividend'
     DIVIDEND_YIELD = 'dividendYield'
+    MARKET_CAP = 'marketCap'
+    SHARES_OUTSTANDING = 'sharesOutstanding'
+
+    # Format des Datums
+    DATE_FORMAT = '%Y-%m-%d'
 
 
     def __init__(self,symbol='',growthRateAnnualyPrc=0,switchLoadData=LOAD_ALL_DATA,tradingPlace=''):
@@ -368,15 +373,15 @@ class Stock:
     def getHistoricalStockPrice(self,startDate,endDate=None):
 
         # Start date
-        start = datetime.strptime(startDate,'%Y-%m-%d') + relativedelta(days=1)
-        startDate = start.strftime('%Y-%m-%d')
+        start = datetime.strptime(startDate,Stock.DATE_FORMAT) + relativedelta(days=1)
+        startDate = start.strftime(Stock.DATE_FORMAT)
 
         # End date
         if endDate is None:
             end = start + relativedelta(days=1)
         else:
-            end = datetime.strptime(endDate,'%Y-%m-%d') + relativedelta(days=1)
-        endDate = end.strftime('%Y-%m-%d')
+            end = datetime.strptime(endDate,Stock.DATE_FORMAT) + relativedelta(days=1)
+        endDate = end.strftime(Stock.DATE_FORMAT)
 
         # Load data from yahoo finance
         return yf.download(self.symbol,start=startDate,end=endDate)
@@ -413,6 +418,8 @@ class StockIndex():
     # Index Symbols
     DOW_JONES_INDEX_SYMBOL = '^DJI'
     DAX_INDEX_SYMBOL = '^GDAXI'
+    MDAX_INDEX_SYMBOL = '^MDAXI'
+    SDAX_INDEX_SYMBOL = '^SDAXI'
 
     def __init__(self,indexSymbol):
 
@@ -432,13 +439,13 @@ class StockIndex():
                 raise ValueError('Missing startDate. You passed endDate=' + str(endDate) + ' but no startDate')
             elif (startDate is not None) and (endDate is None):
                 end = datetime.strptime(startDate)+1
-                endDate = end.strftime('%Y-%m-%d')
+                endDate = end.strftime(Stock.DATE_FORMAT)
             
             # add one day to start and end, to get the correct intervall
-            start = datetime.strptime(startDate,'%Y-%m-%d') + relativedelta(days=1)
-            startDate = start.strftime('%Y-%m-%d')
-            end = datetime.strptime(endDate,'%Y-%m-%d') + relativedelta(days=1)
-            endDate = end.strftime('%Y-%m-%d')
+            start = datetime.strptime(startDate,Stock.DATE_FORMAT) + relativedelta(days=1)
+            startDate = start.strftime(Stock.DATE_FORMAT)
+            end = datetime.strptime(endDate,Stock.DATE_FORMAT) + relativedelta(days=1)
+            endDate = end.strftime(Stock.DATE_FORMAT)
 
             # load data from yahoo finance
             return yf.download(self.symbol, start=startDate, end=endDate)

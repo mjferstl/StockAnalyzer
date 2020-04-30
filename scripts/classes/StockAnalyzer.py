@@ -25,6 +25,10 @@ class StockAnalyzer():
     # investment time: 10 years
     investmentHorizon = 10
 
+    # variables
+    NET_MARGIN = 'net margin'
+    RETURN_ON_EQUITY = 'return on equity'
+
     #
     useWeightedHistoricalData = False
     weightingStep = 1
@@ -57,6 +61,12 @@ class StockAnalyzer():
         self.recommendations = None
         self.LevermannScore = None
 
+        #
+        self.netMargin = pd.Series()
+        self.returnOnEquity = pd.Series()
+        self.returnOnAssets = pd.Series()
+        self.freeCashFlowBySales = pd.Series()
+
         self.dividendYield = 0
 
         # analyze the stock
@@ -69,6 +79,10 @@ class StockAnalyzer():
         self.calcNPV()
         self.calcLevermannScore()
         self.recommendations = self.getRecommendations()
+        self.getNetMargin()
+        self.getReturnOnEquity()
+        self.getReturnOnAssets()
+        self.getFreeCashFlowBySales()
 
 
     def getGrahamNumber(self):
@@ -133,7 +147,7 @@ class StockAnalyzer():
         presentValue = sum(presentValue)
         #print(PV)
 
-        self.NPV = (presentValue - self.stock.keyStatistics["marketCap"])/self.stock.keyStatistics["sharesOutstanding"]
+        self.NPV = (presentValue - self.stock.keyStatistics[Stock.MARKET_CAP])/self.stock.keyStatistics[Stock.SHARES_OUTSTANDING]
 
 
     # Berechnung des Levermann scores
@@ -253,6 +267,82 @@ class StockAnalyzer():
         return latest
 
 
+    def getNetMargin(self):
+        if self.stock.financialData is not None:
+            netIncome = self.stock.financialData.loc['Net Income',:].copy()
+            revenues = self.stock.financialData.loc['Total Revenue',:].copy()
+
+            dic = {}
+            for index in netIncome.index:
+                dic[index] = netIncome.loc[index]/revenues.loc[index]
+
+            df = pd.Series(dic, index=dic.keys())
+            df.reindex(sorted(df.index, reverse=True))
+
+            self.netMargin = df
+
+            return df
+
+
+    def getReturnOnEquity(self):
+        if self.stock.financialData is not None:
+            # Eigenkapital
+            equity = self.stock.financialData.loc['Total Stockholder Equity',:].copy()
+            # Betriebseinkommen
+            income = self.stock.financialData.loc['Net Income',:].copy()
+
+            # Berechnung der Eigenkapitalrendite fuer jedes Jahr
+            dic = {}
+            for index in equity.index:
+                dic[index] = income[index]/equity[index]
+
+            df = pd.Series(dic, index=dic.keys())
+            df.reindex(sorted(df.index, reverse=True))
+
+            self.returnOnEquity = df
+
+            return df
+
+    def getReturnOnAssets(self):
+        if self.stock.financialData is not None:
+            # Gesamtvermögen
+            totalAssets = self.stock.financialData.loc['Total Assets',:].copy()
+            # Betriebseinkommen
+            income = self.stock.financialData.loc['Net Income',:].copy()
+
+            # Berechnung der Kapitalrendite fuer jedes Jahr
+            dic = {}
+            for index in totalAssets.index:
+                dic[index] = income[index]/totalAssets[index]
+
+            df = pd.Series(dic, index=dic.keys())
+            df.reindex(sorted(df.index, reverse=True))
+
+            self.returnOnAssets = df
+
+            return df
+
+    def getFreeCashFlowBySales(self):
+        if self.stock.financialData is not None:
+            # Einnahmen
+            revenues = self.stock.financialData.loc['Total Revenue',:].copy()
+            # Free Cash Flow
+            freeCashFlow = self.stock.financialData.loc['freeCashFlow',:].copy()
+            
+            # Berechnung des Free cash flows bezogen auf die Einnahmen fuer jedes Jahr
+            dic = {}
+            for index in revenues.index:
+                dic[index] = freeCashFlow[index]/revenues[index]
+
+            df = pd.Series(dic, index=dic.keys())
+            df.reindex(sorted(df.index, reverse=True))
+
+            self.freeCashFlowBySales = df
+
+            return df
+
+
+
     def printAnalysis(self):
 
         if self.priceEarningsRatio is None:
@@ -300,7 +390,66 @@ class StockAnalyzer():
         strCurrentStockValue = ''
         stockPrice = self.stock.getBasicDataItem(Stock.MARKET_PRICE)
         if (stockPrice is not None):
-            strCurrentStockValue = '{str:{strFormat}}{val:6.2f}'.format(str="current value:",val=stockPrice,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
+            strCurrentStockValue = '{str:{strFormat}}{val:6.2f}'.format(str="Current price:",val=stockPrice,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
+
+        # Free Cash flow bezogen auf die Einnahmen
+        strFreeCashFlowPerSales = ''
+        if self.freeCashFlowBySales is not None:
+            strFcfpsComment = ''
+            isGood = sum([1 if fcfps > 0.05 else 0 for fcfps in self.freeCashFlowBySales]) == len(self.freeCashFlowBySales)
+            if isGood: # groesser als 15%
+                strFcfpsComment = 'seems good'
+            else:
+                strFcfpsComment = '?'
+
+            avgFcfps = sum(self.freeCashFlowBySales)/len(self.freeCashFlowBySales)
+            strFreeCashFlowPerSales = '{str:{strFormat}}~{val:6.2f}'.format(str="free cash flow/sales (" + str(len(self.netMargin)) + "y):",val=avgFcfps*100,strFormat=stringFormat) + \
+                '% (' + strFcfpsComment + ')\n'    
+
+        # Nettogewinn
+        strNetMargin = ''
+        if self.netMargin is not None:
+            strNetMarginComment = ''
+            isGood = sum([1 if nm > 0.15 else 0 for nm in self.netMargin]) == len(self.netMargin)
+            isBad = sum([1 if nm < 0.05 else 0 for nm in self.netMargin]) == len(self.netMargin)
+            if isGood: # groesser als 15%
+                strNetMarginComment = 'seems good'
+            elif isBad: # kleiner als 5%
+                strNetMarginComment = 'maybe dangerous'
+            else:
+                strNetMarginComment = '-'
+
+            avgNetMargin = sum(self.netMargin)/len(self.netMargin)
+            strNetMargin = '{str:{strFormat}}~{val:6.2f}'.format(str="Net margin (" + str(len(self.netMargin)) + "y):",val=avgNetMargin*100,strFormat=stringFormat) + \
+                '% (' + strNetMarginComment + ')\n'
+
+        # Eigenkapitalrenidte
+        strRoE = ''
+        if self.returnOnEquity is not None:
+            strRoEcomment = ''
+            isGood = sum([1 if roe > 0.15 else 0 for roe in self.returnOnEquity]) == len(self.returnOnEquity)
+            if isGood:
+                strRoEcomment = 'seems good'
+            else:
+                strRoEcomment = '?'
+
+            avgRoE = sum(self.returnOnEquity)/len(self.returnOnEquity)
+            strReturnOnEquity = '{str:{strFormat}}~{val:6.2f}'.format(str="Return on equity (" + str(len(self.returnOnEquity)) + "y):",val=avgRoE*100,strFormat=stringFormat) + \
+                '% (' + strRoEcomment + ')\n'
+
+        # Kapitalrendite
+        strRoA = ''
+        if self.returnOnAssets is not None:
+            strRoAcomment = ''
+            isGood = sum([1 if roa >= 0.06 else 0 for roa in self.returnOnAssets]) == len(self.returnOnAssets)
+            if isGood:
+                strRoAcomment = 'seems good'
+            else:
+                strRoAcomment = '?'
+
+            avgRoA = sum(self.returnOnAssets)/len(self.returnOnAssets)
+            strReturnOnAssets = '{str:{strFormat}}~{val:6.2f}'.format(str="Return on assets (" + str(len(self.returnOnAssets)) + "y):",val=avgRoA*100,strFormat=stringFormat) + \
+                '% (' + strRoEcomment + ')\n'
 
 
         # format margin around stock name
@@ -321,12 +470,17 @@ class StockAnalyzer():
             ' - margin of safety: {marginOfSafety:2.0f}%\n'.format(marginOfSafety=StockAnalyzer.marginOfSafety*100) + \
             ' - exp. growth rate: {expGrwRate:2.0f}%\n'.format(expGrwRate=StockAnalyzer.expectedReturn*100) + \
             ' - investment horizon: {years:.0f} years\n'.format(years=self.investmentHorizon) + \
+            ' - exp. annual growth: {grwth:.1f} %\n'.format(grwth=self.stock.growthRateAnnualy*100) + \
             '\n' + \
             '{str:{strFormat}}{val:6.2f}'.format(str="Fair value:",val=self.fairValue,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n' + \
             strGrahamNumber + \
             strNetPresentValue + \
+            strNetMargin + \
+            strReturnOnEquity + \
+            strReturnOnAssets + \
+            strFreeCashFlowPerSales + \
             strCurrentStockValue + \
-            sepString + '\n'
+            sepString
 
         # print to the console
         print(string2Print)
@@ -334,8 +488,8 @@ class StockAnalyzer():
         if (self.LevermannScore is not None):
             self.LevermannScore.printScore()
 
+        print('\n')
 
-DEBUG = False
 
 # ---------- FUNCTIONS ----------
 #
@@ -345,6 +499,8 @@ def calcFairValue(earningsPerShare,growthRateAnnualy,priceEarningsRatio,expected
         Berechnungsgrundpagen:
         - angegebene growthRateAnnualy gilt fuer die naechsten Jahre
     """
+
+    DEBUG = False
 
     if DEBUG:
         print('Argumente fuer die Funktion calcFairValue()')
@@ -381,6 +537,12 @@ class LevermannScore():
     REVERSAL_POSITIVE = 'Aktie schlaegt Index'
     REVERSAL_NEGATIVE = 'Aktie schlechter als Index'
 
+    # Kommentare zum berechneten Score
+    COMMENT_BUY = 'kaufen'
+    COMMENT_HOLD = 'halten'
+    COMMENT_SELL = 'verkaufen'
+    COMMENT_DEFAULT = ''
+
 
     def __init__(self,stock,index):
         if not isinstance(stock,Stock):
@@ -393,6 +555,7 @@ class LevermannScore():
         self.stock = stock
         self.stockIndex = index
         self.Score = None
+        self.Comment = self.COMMENT_DEFAULT
 
         # Werte fuer die Berechnung des Levermann-Scores
         # Return on Equity (RoE), Eigenkapitalrenite letztes Jahr
@@ -460,6 +623,12 @@ class LevermannScore():
         # EBIT-Marge (EBIT / Umsatz)
         # EBIT
         EBIT = list(self.stock.financialData.loc['Ebit',:].copy())
+        if 0 in EBIT:
+            print('\n +++ EBIT enthält mindestens einen Eintrag mit 0 +++')
+            print(self.stock.financialData.loc['Ebit',:])
+            print(self.stock.financialData)
+            print('\n')
+
         # Umsatz
         totalSales = list(self.stock.financialData.loc['Total Revenue',:].copy())
 
@@ -517,12 +686,26 @@ class LevermannScore():
         # KGV 5 Jahre (letzten 3 Jahre, aktuelles Jahr, nächstes Jahr)
         # EPS der letzten Jahre auslesen und von alt zu neu sortieren
         EPSdf = self.stock.financialData.loc['dilutedEPS',:].copy()
-        EPS = list(EPSdf)
+        # Die Eintraege absteigend nach dem Datum auslesen
+        EPS = [EPSdf.loc[date] for date in sorted(EPSdf.index,reverse=True)]
+        # alt zu neu
         EPS.reverse()
 
         # EPS-Schaetzung fuer aktuelles und naechstes Jahr anhaengen
         EPS.append(EPS_est_this_year)
         EPS.append(EPS_est_next_year)
+
+        # nur die letzten 5 Eintraege
+        if len(EPS) > 5:
+            EPS = EPS[-5:]
+        
+        # NaN-Werte durch den Mittelwert ersetzen
+        if ('NaN' in str(EPS)) or ('nan' in str(EPS)):
+            EPS_wo_nan = [eps for eps in EPS if not np.isnan(eps)]
+            EPS_avg = sum(EPS_wo_nan)/len(EPS_wo_nan)
+            EPS = [eps if not np.isnan(eps) else EPS_avg for eps in EPS]
+
+        #print('EPS der letzten Jahre: ' + str(EPS))
 
         # mittleres EPS des 5-Jahres-Zeitraums berechnen
         EPS_mean_5y = sum(EPS)/len(EPS)
@@ -566,6 +749,7 @@ class LevermannScore():
 
         # Reaktion auf Quartalszahlen
         # ?
+        # TODO Herausfinden, wo man das Datum der Veroeffentlichung der Quartalszahlen abgreifen kann
 
         # Gewinnrevisionen
         #
@@ -577,9 +761,12 @@ class LevermannScore():
         stockPrice_today = self.stock.getBasicDataItem(self.stock.MARKET_PRICE)
         # Kurs vor einem Jahr
         date_1y_ago = today + relativedelta(years=-1)
-        date_1y_ago_str = date_1y_ago.strftime('%Y-%m-%d')
-        stock_1y_ago = self.stock.getHistoricalStockPrice(startDate=date_1y_ago_str,endDate=today.strftime('%Y-%m-%d'))
-        price_1y_ago = stock_1y_ago.loc[date_1y_ago_str,'Close']
+        date_1y_ago_str = date_1y_ago.strftime(Stock.DATE_FORMAT)
+        stock_1y_ago = self.stock.getHistoricalStockPrice(startDate=date_1y_ago_str,endDate=today.strftime(Stock.DATE_FORMAT))
+        date_1y_ago_nearest = findNearestDate(date_1y_ago,npDateTime64_2_str(stock_1y_ago.index.values.copy()))
+        price_1y_ago = stock_1y_ago.loc[date_1y_ago_nearest,'Close']
+        
+        
         # relative Aenderung seit einem Jahr
         relativeChangePrc_1y = (stockPrice_today/price_1y_ago-1)*100
         self.sharePriceRelative_1y = relativeChangePrc_1y
@@ -592,13 +779,10 @@ class LevermannScore():
 
         
         # Kursverlauf der letzten 6 Monate
-        #
-        
         # historischer Wert vor 6 Monaten
         date_6m_ago = today + relativedelta(months=-6)
-        date_6m_ago_str = date_6m_ago.strftime('%Y-%m-%d')
-        #stock_6m_ago = self.stock.getHistoricalStockPrice(date_6m_ago.strftime('%Y-%m-%d'))
-        price_6m_ago = stock_1y_ago.loc[date_6m_ago_str,'Close']
+        date_6m_ago_nearest = findNearestDate(date_6m_ago,npDateTime64_2_str(stock_1y_ago.index.values.copy()))
+        price_6m_ago = stock_1y_ago.loc[date_6m_ago_nearest,'Close']
         relativeChangePrc_6m = (stockPrice_today/price_6m_ago-1)*100
         self.sharePriceRelative_6m = relativeChangePrc_6m
 
@@ -627,33 +811,21 @@ class LevermannScore():
         date_3m_ago = today + relativedelta(months=-3)
         date_2m_ago = today + relativedelta(months=-2)
         date_1m_ago = today + relativedelta(months=-1)
-        indexData = self.stockIndex.loadHistoricalData(startDate=date_4m_ago.strftime('%Y-%m-%d'),endDate=today.strftime('%Y-%m-%d'))
+        indexData = self.stockIndex.loadHistoricalData(startDate=date_4m_ago.strftime(Stock.DATE_FORMAT),endDate=today.strftime(Stock.DATE_FORMAT))
 
         # Performance der Aktie
-        stockPrices_3m = []
-        indexPrices_3m = []
+        stockPrices_3m, indexPrices_3m = [], []
         dateList = npDateTime64_2_str(stock_1y_ago.index.values)
         for date in [date_3m_ago,date_2m_ago,date_1m_ago,today]:
             # finden eines passenden Datums
-            if date.strftime('%Y-%m-%d') in dateList:
-                stockPrices_3m.append(stock_1y_ago.loc[date.strftime('%Y-%m-%d'),'Close'])
-                indexPrices_3m.append(indexData.loc[date.strftime('%Y-%m-%d'),'Close'])
+            date_str = date.strftime(Stock.DATE_FORMAT)
+            if date_str in dateList:
+                stockPrices_3m.append(stock_1y_ago.loc[date_str,'Close'])
+                indexPrices_3m.append(indexData.loc[date_str,'Close'])
             else:
-                # 20 Versuche, um ein anderes Datum in der Naehe zu finden
-                for i in range(1,20):
-                    newDate = date + relativedelta(days=1*i)
-                    newDate_str = newDate.strftime('%Y-%m-%d')
-                    if newDate_str in dateList:
-                        stockPrices_3m.append(stock_1y_ago.loc[newDate_str,'Close'])
-                        indexPrices_3m.append(indexData.loc[newDate_str,'Close'])
-                        break
-
-                    newDate_reverse = date + relativedelta(days=-1*i)
-                    newDate_reverse_str = newDate_reverse.strftime('%Y-%m-%d')
-                    if newDate_reverse_str in dateList:
-                        stockPrices_3m.append(stock_1y_ago.loc[newDate_reverse_str,'Close'])
-                        indexPrices_3m.append(indexData.loc[newDate_reverse_str,'Close'])
-                        break
+                nearestDate = findNearestDate(date,dateList)
+                stockPrices_3m.append(stock_1y_ago.loc[nearestDate,'Close'])
+                indexPrices_3m.append(indexData.loc[nearestDate,'Close'])
 
         # Performance der Aktie
         stockPerformanceRelative = [(stockPrices_3m[i]/stockPrices_3m[i-1]-1)*100 for i in range(1,len(stockPrices_3m))]
@@ -674,10 +846,10 @@ class LevermannScore():
         self.reversal_3m = self.REVERSAL_DEFAULT
         if (sum(performanceCompare) == 0):
             LevermannScore += 1
-            self.reversal_3m = self.REVERSAL_POSITIVE
+            self.reversal_3m = self.REVERSAL_NEGATIVE
         elif (sum(performanceCompare) == len(performanceCompare)):
             LevermannScore -= 1
-            self.reversal_3m = self.REVERSAL_NEGATIVE
+            self.reversal_3m = self.REVERSAL_POSITIVE
 
 
         # Gewinnwachstum
@@ -689,17 +861,47 @@ class LevermannScore():
         elif (profitGrowthPrc < -5):
             LevermannScore -= 1
 
-        # optinal: Marktkapitalisierung
+        # optional: Marktkapitalisierung
         #
 
         # optional: Branche
         # 
 
         self.Score = LevermannScore
+
         # Gesamt Bewertung:
         # Kaufen: Large Caps >= 4 Punkte; Small und Mid >= 7 Punkte
         # Halten: Large Caps >= 3 Punkte; Small und Mid >= 5-6 Punkte
         # Verkaufen: Large Caps >= 2 Punkte; Small und Mid >= 4 Punkte
+
+        # Fazit/Kommentar
+        # Unterscheidung zwischen Large Caps (> 5 Mrd.), Mid Caps (> 2 Mrd.) und Small Caps (< 2 Mrd.)
+        marketCap = self.stock.keyStatistics[Stock.MARKET_CAP]
+        # Large Cap
+        if (marketCap > 5*10**9):
+            if (LevermannScore >= 4):
+                self.Comment = self.COMMENT_BUY
+            elif (LevermannScore >= 3):
+                self.Comment = self.COMMENT_HOLD
+            else: 
+                self.Comment = self.COMMENT_SELL
+        # Mid Cap
+        elif (marketCap > 2*10**9):
+            if (LevermannScore >= 7):
+                self.Comment = self.COMMENT_BUY
+            elif (LevermannScore >= 5):
+                self.Comment = self.COMMENT_HOLD
+            else: 
+                self.Comment = self.COMMENT_SELL
+        # Small Cap
+        else:
+            if (LevermannScore >= 7):
+                self.Comment = self.COMMENT_BUY
+            elif (LevermannScore >= 6):
+                self.Comment = self.COMMENT_HOLD
+            else: 
+                self.Comment = self.COMMENT_SELL
+
 
     def printScore(self):
 
@@ -746,5 +948,35 @@ class LevermannScore():
             print('13. Gewinnwachstum: {pgrw:.2f}%'.format(pgrw=self.profitGrowth*100))
 
         print('------------------------')
-        print('Levermann score: {ls}'.format(ls=self.Score))
+        print('Levermann score: {ls} ({comment}) !unvollständig!'.format(ls=self.Score,comment=self.Comment))
         print('------------------------\n')
+
+
+
+def findNearestDate(datetime_object,datesList,dateFormat=Stock.DATE_FORMAT):
+    """
+        Gibt das Datum als String zurueck, das die geringste Differenz zum Datum
+        im Argument datetime_object hat
+        - datetime_object: Objekt der Klasse datetime.datetime
+        - datesList: list mit allen Datums als Strings im Format des Arguments dateFormat
+    """
+
+    # Finden eines passenden Datums
+    date_str = datetime_object.strftime(dateFormat)
+    if date_str in datesList:
+        return date_str
+    else:
+        # 100 Versuche, um ein anderes Datum in der Naehe zu finden
+        for i in range(1,100):
+            newDate = datetime_object + relativedelta(days=1*i)
+            newDate_str = newDate.strftime(dateFormat)
+            if newDate_str in datesList:
+                return newDate_str
+
+            newDate_reverse = datetime_object + relativedelta(days=-1*i)
+            newDate_reverse_str = newDate_reverse.strftime(dateFormat)
+            if newDate_reverse_str in datesList:
+                return newDate_reverse_str
+
+    # Wenn nichts gefunden wurde, dann wird ein leerer String zurueckgegeben
+    return ''
