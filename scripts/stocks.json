@@ -11,6 +11,12 @@
             "Symbol": "AT1.DE",
             "Index": "MDAX",
             "data_file": "aroundtown.json"
+        },
+        {
+            "Name": "Wabtec",
+            "Symbol": "WAB",
+            "Index": "",
+            "data_file": "wabtec.json"
         }
     ],
     "Index": [

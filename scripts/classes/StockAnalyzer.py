@@ -397,12 +397,15 @@ class StockAnalyzer():
         if self.freeCashFlowBySales is not None:
             strFcfpsComment = ''
             isGood = sum([1 if fcfps > 0.05 else 0 for fcfps in self.freeCashFlowBySales]) == len(self.freeCashFlowBySales)
+            avgFcfps = sum(self.freeCashFlowBySales)/len(self.freeCashFlowBySales)
             if isGood: # groesser als 15%
                 strFcfpsComment = 'seems good'
+            elif avgFcfps > 0.05:
+                 strFcfpsComment = 'tends to be good'
             else:
                 strFcfpsComment = '?'
 
-            avgFcfps = sum(self.freeCashFlowBySales)/len(self.freeCashFlowBySales)
+            
             strFreeCashFlowPerSales = '{str:{strFormat}}~{val:6.2f}'.format(str="free cash flow/sales (" + str(len(self.netMargin)) + "y):",val=avgFcfps*100,strFormat=stringFormat) + \
                 '% (' + strFcfpsComment + ')\n'    
 

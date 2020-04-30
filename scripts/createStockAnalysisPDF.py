@@ -10,7 +10,7 @@ import json
 
 ### Eingabe Start
 
-stockName = 'Microsoft'
+stockName = 'Wabtec'
 
 
 ### Eingabe Ende
@@ -26,7 +26,7 @@ for s in stockJSON["Stocks"]:
         stock = s
         break
 
-if s == '':
+if stock == '':
     print('please add the stock in the file ' + stocksFile)
     sys.exit(1000)
 
@@ -42,14 +42,20 @@ else:
     print('\n +++ no data file +++\n')
     sys.exit(1000)
 
+
 index = ''
 # get the index
-for i in stockJSON["Index"]:
-    if i["Name"] == stockIndex:
-        index = i
-        break
+if stockIndex == '':
+    print('No index for ' + stockName + ' given..')
+    index = {}
+    index["Symbol"] = None
+else:
+    for i in stockJSON["Index"]:
+        if i["Name"] == stockIndex:
+            index = i
+            break
 
-if s == '':
+if index == '':
     print('please add the index "' + stockIndex + ' in the file ' + stocksFile)
     sys.exit(1000)
 
