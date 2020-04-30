@@ -1,0 +1,34 @@
+{
+    "Stocks": [
+        {
+            "Name": "Microsoft",
+            "Symbol": "MSFT",
+            "Index": "Dow Jones",
+            "data_file": "microsoft.json"
+        },
+        {
+            "Name": "Aroundtown SA",
+            "Symbol": "AT1.DE",
+            "Index": "MDAX",
+            "data_file": "aroundtown.json"
+        }
+    ],
+    "Index": [
+        {
+            "Name": "Dow Jones",
+            "Symbol": "^DJI"
+        },
+        {
+            "Name": "DAX",
+            "Symbol": "^GDAXI"
+        },
+        {
+            "Name": "MDAX",
+            "Symbol": "^MDAXI"
+        },
+        {
+            "Name": "SDAX",
+            "Symbol": "^SDAXI"
+        }
+    ]
+}
