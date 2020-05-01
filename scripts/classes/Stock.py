@@ -33,10 +33,6 @@ pd.set_option('display.max_colwidth', None)
 # DEV-VARIABLES
 DEBUG = False
 
-# default symbol for the stock exchange trading place
-# - de: XETRA
-defaultTradingPlace = 'DE'
-
 # currencies
 EURO = u"Euro"
 DOLLAR = u"Dollar"
@@ -72,7 +68,7 @@ class Stock:
     DATE_FORMAT = '%Y-%m-%d'
 
 
-    def __init__(self,symbol='',growthRateAnnualyPrc=0,switchLoadData=LOAD_ALL_DATA,tradingPlace=''):
+    def __init__(self,symbol='',growthRateAnnualyPrc=0,switchLoadData=LOAD_ALL_DATA,dates=None):
 
         self.growthRateAnnualy = growthRateAnnualyPrc/100
 
@@ -81,6 +77,7 @@ class Stock:
         self.name = None
         self.ticker = None
         self.currency = None
+        
         self.currencySymbol = ''
 
         # dict and DataFrame to store all information
@@ -96,12 +93,9 @@ class Stock:
         # storing recommendations for buying, holding and selling
         self.recommendations = None
 
-
-        # Exchange traing place
-        if ('.' in symbol) or (tradingPlace is ''):
-            self.symbol = symbol
-        else:
-            self.symbol = symbol + '.' + defaultTradingPlace
+        # 
+        self.symbol = symbol
+        self.dates = dates
 
         # Load data
         if switchLoadData == self.LOAD_ALL_DATA:

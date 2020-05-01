@@ -19,9 +19,6 @@ class StockAnalyzer():
     #
     # margin of safety: 20% --> 0.20
     marginOfSafety = 0.2
-    # expected return (exprectedReturn): 15% --> 0.15
-    expectedReturnPrc = 10
-    expectedReturn = expectedReturnPrc/100
     # investment time: 10 years
     investmentHorizon = 10
 
@@ -129,7 +126,7 @@ class StockAnalyzer():
         meanGrowthPrc = sum(growthPrc)/len(growthPrc)
         print('mittleres Cashflow-Wachstum der letzten {years:.0f} Jahre: {cfGrowth:.2f}%'.format(years=len(CF_sorted),cfGrowth=meanGrowthPrc))
 
-        discountRate = self.expectedReturn # discount in percent
+        discountRate = self.stock.growthRateAnnualy # discount
         presentValue = [] # present value
         # Scheife ueber alle zu betrachtenden Jahre
         for year in range(1,self.investmentHorizon+1):
@@ -208,7 +205,7 @@ class StockAnalyzer():
                 print("growthRateAnnualy: " + str(self.stock.growthRateAnnualy))
                 print("The annualy growth rate gets increased by the dividend yield of {divYield:5.2f}%. New annualy growth rate: {grwRate:5.2f}".format(divYield=self.dividendYield,grwRate=growthRateAnnualy))
 
-            self.fairValue = calcFairValue(self.meanWeightedEps,growthRateAnnualy,self.stock.getBasicDataItem(Stock.PE_RATIO),StockAnalyzer.expectedReturn,StockAnalyzer.marginOfSafety,StockAnalyzer.investmentHorizon)
+            self.fairValue = calcFairValue(self.meanWeightedEps,growthRateAnnualy,self.stock.getBasicDataItem(Stock.PE_RATIO),self.stock.growthRateAnnualy,StockAnalyzer.marginOfSafety,StockAnalyzer.investmentHorizon)
 
         return self.fairValue
 
@@ -273,7 +270,7 @@ class StockAnalyzer():
             revenues = self.stock.financialData.loc['Total Revenue',:].copy()
 
             dic = {}
-            for index in netIncome.index:
+            for index in sorted(netIncome.index, reverse=True):
                 dic[index] = netIncome.loc[index]/revenues.loc[index]
 
             df = pd.Series(dic, index=dic.keys())
@@ -293,12 +290,10 @@ class StockAnalyzer():
 
             # Berechnung der Eigenkapitalrendite fuer jedes Jahr
             dic = {}
-            for index in equity.index:
+            for index in sorted(equity.index, reverse=True):
                 dic[index] = income[index]/equity[index]
 
             df = pd.Series(dic, index=dic.keys())
-            df.reindex(sorted(df.index, reverse=True))
-
             self.returnOnEquity = df
 
             return df
@@ -312,12 +307,10 @@ class StockAnalyzer():
 
             # Berechnung der Kapitalrendite fuer jedes Jahr
             dic = {}
-            for index in totalAssets.index:
+            for index in sorted(totalAssets.index,reverse=True):
                 dic[index] = income[index]/totalAssets[index]
 
             df = pd.Series(dic, index=dic.keys())
-            df.reindex(sorted(df.index, reverse=True))
-
             self.returnOnAssets = df
 
             return df
@@ -331,12 +324,10 @@ class StockAnalyzer():
             
             # Berechnung des Free cash flows bezogen auf die Einnahmen fuer jedes Jahr
             dic = {}
-            for index in revenues.index:
+            for index in sorted(revenues.index, reverse=True):
                 dic[index] = freeCashFlow[index]/revenues[index]
 
             df = pd.Series(dic, index=dic.keys())
-            df.reindex(sorted(df.index, reverse=True))
-
             self.freeCashFlowBySales = df
 
             return df
@@ -349,8 +340,8 @@ class StockAnalyzer():
             self.getPriceEarningsRatio()
 
         # variables for formatting the console output
-        stringFormat = "24s"
-        dispLineLength = 40
+        stringFormat = "35s"
+        dispLineLength = 50
         sepString = '-'*dispLineLength + '\n'
 
         #
@@ -396,63 +387,75 @@ class StockAnalyzer():
         strFreeCashFlowPerSales = ''
         if self.freeCashFlowBySales is not None:
             strFcfpsComment = ''
-            isGood = sum([1 if fcfps > 0.05 else 0 for fcfps in self.freeCashFlowBySales]) == len(self.freeCashFlowBySales)
+            limit = 5/100.0
+            isGood = sum([1 if fcfps > limit else 0 for fcfps in self.freeCashFlowBySales]) == len(self.freeCashFlowBySales)
             avgFcfps = sum(self.freeCashFlowBySales)/len(self.freeCashFlowBySales)
-            if isGood: # groesser als 15%
-                strFcfpsComment = 'seems good'
-            elif avgFcfps > 0.05:
-                 strFcfpsComment = 'tends to be good'
+            if isGood: # groesser als 5%
+                strFcfpsComment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
+            elif avgFcfps > limit:
+                 strFcfpsComment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
             else:
                 strFcfpsComment = '?'
 
             
-            strFreeCashFlowPerSales = '{str:{strFormat}}~{val:6.2f}'.format(str="free cash flow/sales (" + str(len(self.netMargin)) + "y):",val=avgFcfps*100,strFormat=stringFormat) + \
+            strFreeCashFlowPerSales = '{str:{strFormat}}{val:6.2f}'.format(str="free cash flow/sales (" + str(len(self.netMargin)) + "y avg.):",val=avgFcfps*100,strFormat=stringFormat) + \
                 '% (' + strFcfpsComment + ')\n'    
 
         # Nettogewinn
         strNetMargin = ''
         if self.netMargin is not None:
             strNetMarginComment = ''
-            isGood = sum([1 if nm > 0.15 else 0 for nm in self.netMargin]) == len(self.netMargin)
-            isBad = sum([1 if nm < 0.05 else 0 for nm in self.netMargin]) == len(self.netMargin)
+            limit = 15/100.0
+            limit2 = 5/100.0
+            isGood = sum([1 if nm > limit else 0 for nm in self.netMargin]) == len(self.netMargin)
+            isBad = sum([1 if nm < limit2 else 0 for nm in self.netMargin]) == len(self.netMargin)
+            avgNetMargin = sum(self.netMargin)/len(self.netMargin)
             if isGood: # groesser als 15%
-                strNetMarginComment = 'seems good'
+                strNetMarginComment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
+            elif avgNetMargin > limit:
+                strNetMarginComment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
             elif isBad: # kleiner als 5%
-                strNetMarginComment = 'maybe dangerous'
+                strNetMarginComment = 'Caution!, avg < {limit:.0f}%'.format(limit=limit2*100)
             else:
                 strNetMarginComment = '-'
 
-            avgNetMargin = sum(self.netMargin)/len(self.netMargin)
-            strNetMargin = '{str:{strFormat}}~{val:6.2f}'.format(str="Net margin (" + str(len(self.netMargin)) + "y):",val=avgNetMargin*100,strFormat=stringFormat) + \
+            strNetMargin = '{str:{strFormat}}{val:6.2f}'.format(str="Net margin (" + str(len(self.netMargin)) + "y avg.):",val=avgNetMargin*100,strFormat=stringFormat) + \
                 '% (' + strNetMarginComment + ')\n'
 
         # Eigenkapitalrenidte
         strRoE = ''
         if self.returnOnEquity is not None:
             strRoEcomment = ''
-            isGood = sum([1 if roe > 0.15 else 0 for roe in self.returnOnEquity]) == len(self.returnOnEquity)
-            if isGood:
-                strRoEcomment = 'seems good'
+            limit = 15/100.0
+            isGood = sum([1 if roe > limit else 0 for roe in self.returnOnEquity]) == len(self.returnOnEquity)
+            avgRoE = sum(self.returnOnEquity)/len(self.returnOnEquity)
+            if isGood: 
+                strRoEcomment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
+            elif avgRoE > limit:
+                strRoEcomment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
             else:
                 strRoEcomment = '?'
 
-            avgRoE = sum(self.returnOnEquity)/len(self.returnOnEquity)
-            strReturnOnEquity = '{str:{strFormat}}~{val:6.2f}'.format(str="Return on equity (" + str(len(self.returnOnEquity)) + "y):",val=avgRoE*100,strFormat=stringFormat) + \
+            strReturnOnEquity = '{str:{strFormat}}{val:6.2f}'.format(str="Return on equity (" + str(len(self.returnOnEquity)) + "y avg.):",val=avgRoE*100,strFormat=stringFormat) + \
                 '% (' + strRoEcomment + ')\n'
 
         # Kapitalrendite
         strRoA = ''
         if self.returnOnAssets is not None:
             strRoAcomment = ''
-            isGood = sum([1 if roa >= 0.06 else 0 for roa in self.returnOnAssets]) == len(self.returnOnAssets)
+            limit = 6/100.0
+            isGood = sum([1 if roa >= limit else 0 for roa in self.returnOnAssets]) == len(self.returnOnAssets)
+            avgRoA = sum(self.returnOnAssets)/len(self.returnOnAssets)
             if isGood:
-                strRoAcomment = 'seems good'
+                strRoAcomment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
+            elif avgRoA >= limit:
+                strRoAcomment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
             else:
                 strRoAcomment = '?'
 
-            avgRoA = sum(self.returnOnAssets)/len(self.returnOnAssets)
-            strReturnOnAssets = '{str:{strFormat}}~{val:6.2f}'.format(str="Return on assets (" + str(len(self.returnOnAssets)) + "y):",val=avgRoA*100,strFormat=stringFormat) + \
-                '% (' + strRoEcomment + ')\n'
+            
+            strReturnOnAssets = '{str:{strFormat}}{val:6.2f}'.format(str="Return on assets (" + str(len(self.returnOnAssets)) + "y avg.):",val=avgRoA*100,strFormat=stringFormat) + \
+                '% (' + strRoAcomment + ')\n'
 
 
         # format margin around stock name
@@ -471,7 +474,6 @@ class StockAnalyzer():
             sepString + \
             'Analysis:\n' + \
             ' - margin of safety: {marginOfSafety:2.0f}%\n'.format(marginOfSafety=StockAnalyzer.marginOfSafety*100) + \
-            ' - exp. growth rate: {expGrwRate:2.0f}%\n'.format(expGrwRate=StockAnalyzer.expectedReturn*100) + \
             ' - investment horizon: {years:.0f} years\n'.format(years=self.investmentHorizon) + \
             ' - exp. annual growth: {grwth:.1f} %\n'.format(grwth=self.stock.growthRateAnnualy*100) + \
             '\n' + \
@@ -482,6 +484,7 @@ class StockAnalyzer():
             strReturnOnEquity + \
             strReturnOnAssets + \
             strFreeCashFlowPerSales + \
+            sepString + \
             strCurrentStockValue + \
             sepString
 
@@ -751,21 +754,55 @@ class LevermannScore():
             LevermannScore -= 1
 
         # Reaktion auf Quartalszahlen
-        # ?
-        # TODO Herausfinden, wo man das Datum der Veroeffentlichung der Quartalszahlen abgreifen kann
+
+        # Daten fuer das vergangene Jahr laden, da diese mehrfach benoetigt werden
+        today = datetime.datetime.utcnow()
+        date_1y_ago = today + relativedelta(years=-1)
+        date_1y_ago_str = date_1y_ago.strftime(Stock.DATE_FORMAT)
+
+        # Wert fuer die Aktie und den Index
+        stock_1y_ago = self.stock.getHistoricalStockPrice(startDate=date_1y_ago_str,endDate=today.strftime(Stock.DATE_FORMAT))
+        index_1y_ago = self.stockIndex.loadHistoricalData(startDate=date_1y_ago_str,endDate=today.strftime(Stock.DATE_FORMAT))
+
+        # 
+        if (self.stock.dates is not None) and ("quarterlyReports" in self.stock.dates):
+            # get latest date of quarterly reports of the past
+            quarterlyReportDates = [qrd["date"] for qrd in self.stock.dates["quarterlyReports"] if qrd["date"] < today.strftime(Stock.DATE_FORMAT)]
+            lastquarterlyReportDate = sorted(quarterlyReportDates,reverse=True)[0]
+            date_quarterlyReport_nearest = findNearestDate(lastquarterlyReportDate,npDateTime64_2_str(stock_1y_ago.index.values.copy()))
+
+            # Eröffnungskurs Aktie und Index am Tag der Veröffentlichung der Quartalszahlen
+            stockOpen1 = stock_1y_ago.loc[date_quarterlyReport_nearest,'Open']
+            indexOpen1 = index_1y_ago.loc[date_quarterlyReport_nearest,'Open']
+
+            # Eroeffnungskurs am nächsten Handelstag
+            nextDateIndex = npDateTime64_2_str(stock_1y_ago.index.values.copy()).index(date_quarterlyReport_nearest)+1
+            stockOpen2 = stock_1y_ago.iloc[nextDateIndex].loc['Open']
+            indexOpen2 = index_1y_ago.iloc[nextDateIndex].loc['Open']
+
+            # Änderung in %
+            stockChange = stockOpen2/stockOpen1-1
+            indexChange = indexOpen2/indexOpen1-1
+            reaction = (stockChange - indexChange)*100
+            self.quarterlyReaction = reaction
+
+            if reaction > 1:
+                LevermannScore += 1
+            elif reaction < -1:
+                LevermannScore -= 1
+        else:
+            print('\n +++ Fehlende Daten: Datum der Veröffentichung der Quartalszahlen fehlt +++\n')
+
 
         # Gewinnrevisionen
         #
 
         # Kursverlauf der letzten 12 Monate
         #
-        today = datetime.datetime.utcnow()
+        
         # Kurs heute
         stockPrice_today = self.stock.getBasicDataItem(self.stock.MARKET_PRICE)
         # Kurs vor einem Jahr
-        date_1y_ago = today + relativedelta(years=-1)
-        date_1y_ago_str = date_1y_ago.strftime(Stock.DATE_FORMAT)
-        stock_1y_ago = self.stock.getHistoricalStockPrice(startDate=date_1y_ago_str,endDate=today.strftime(Stock.DATE_FORMAT))
         date_1y_ago_nearest = findNearestDate(date_1y_ago,npDateTime64_2_str(stock_1y_ago.index.values.copy()))
         price_1y_ago = stock_1y_ago.loc[date_1y_ago_nearest,'Close']
         
@@ -814,7 +851,7 @@ class LevermannScore():
         date_3m_ago = today + relativedelta(months=-3)
         date_2m_ago = today + relativedelta(months=-2)
         date_1m_ago = today + relativedelta(months=-1)
-        indexData = self.stockIndex.loadHistoricalData(startDate=date_4m_ago.strftime(Stock.DATE_FORMAT),endDate=today.strftime(Stock.DATE_FORMAT))
+        
 
         # Performance der Aktie
         stockPrices_3m, indexPrices_3m = [], []
@@ -824,11 +861,11 @@ class LevermannScore():
             date_str = date.strftime(Stock.DATE_FORMAT)
             if date_str in dateList:
                 stockPrices_3m.append(stock_1y_ago.loc[date_str,'Close'])
-                indexPrices_3m.append(indexData.loc[date_str,'Close'])
+                indexPrices_3m.append(index_1y_ago.loc[date_str,'Close'])
             else:
                 nearestDate = findNearestDate(date,dateList)
                 stockPrices_3m.append(stock_1y_ago.loc[nearestDate,'Close'])
-                indexPrices_3m.append(indexData.loc[nearestDate,'Close'])
+                indexPrices_3m.append(index_1y_ago.loc[nearestDate,'Close'])
 
         # Performance der Aktie
         stockPerformanceRelative = [(stockPrices_3m[i]/stockPrices_3m[i-1]-1)*100 for i in range(1,len(stockPrices_3m))]
@@ -910,9 +947,11 @@ class LevermannScore():
 
         #print(self.stock.financialData)
 
-        print('------------------------')
+        sepLineLength = 45
+
+        print('-'*sepLineLength)
         print('    Levermann Score     ')
-        print('------------------------')
+        print('-'*sepLineLength)
         
         if (self.returnOnEquity is not None):
             print('1. Eigenkapitalrendite LJ: {roe:.2f}%'.format(roe=self.returnOnEquity))
@@ -932,7 +971,9 @@ class LevermannScore():
         if (self.recommendations is not None):
             print('6. Analystenmeinungen: {rec:.2f}'.format(rec=self.recommendations))
 
-        print('7. Reaktion auf Quartalszahlen FEHLT NOCH')
+        if (self.quarterlyReaction is not None):
+            print('7. Reaktion auf Quartalszahlen: {reaction:.2f}%'.format(reaction=self.quarterlyReaction))
+
         print('8. Gewinnrevision FEHLT NOCH')
 
         if (self.sharePriceRelative_6m is not None):
@@ -950,9 +991,9 @@ class LevermannScore():
         if (self.profitGrowth is not None):
             print('13. Gewinnwachstum: {pgrw:.2f}%'.format(pgrw=self.profitGrowth*100))
 
-        print('------------------------')
+        print('-'*sepLineLength)
         print('Levermann score: {ls} ({comment}) !unvollständig!'.format(ls=self.Score,comment=self.Comment))
-        print('------------------------\n')
+        print('-'*sepLineLength + '\n')
 
 
 
@@ -965,7 +1006,13 @@ def findNearestDate(datetime_object,datesList,dateFormat=Stock.DATE_FORMAT):
     """
 
     # Finden eines passenden Datums
-    date_str = datetime_object.strftime(dateFormat)
+    if isinstance(datetime_object,str):
+        date_str = datetime_object
+    elif isinstance(datetime_object,datetime.datetime):
+        date_str = datetime_object.strftime(dateFormat)
+    else:
+        raise ValueError('Argument of type ' + type(datetime_object) + ' is not supported')
+
     if date_str in datesList:
         return date_str
     else:

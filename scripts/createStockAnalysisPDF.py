@@ -10,16 +10,17 @@ import json
 
 ### Eingabe Start
 
-stockName = 'Wabtec'
-
+stockName = 'Aroundtown'
 
 ### Eingabe Ende
 
 
+# Laden der Informationen aus dem JSON-File
 stocksFile = "scripts/stocks.json"
 with open(stocksFile) as f:
     stockJSON = json.load(f)
 
+# Finden der ausgewählten Aktie im JSON-File
 stock = ''
 for s in stockJSON["Stocks"]:
     if s["Name"] == stockName:
@@ -27,24 +28,34 @@ for s in stockJSON["Stocks"]:
         break
 
 if stock == '':
-    print('please add the stock in the file ' + stocksFile)
+    print('\n +++ Please add the stock in the file ' + stocksFile + ' +++\n')
     sys.exit(1000)
 
+# Auslesen von Symbol und dem Index, in dem die Aktie gelistet ist
 symbol = stock["Symbol"]
 stockIndex = stock["Index"]
 
+# Öffnen des zur Aktie zugehörigen Data-Files mit dem Wachstumsprognosen
+# sowie den VEröffentlichungsterminen für Quartals- und Jahreszahlen
 data_file = 'scripts/' + stock["data_file"]
 if os.path.isfile(data_file):
     with open(data_file) as f:
-        stockEstimates = json.load(f)
-    annualGrowthPrc = stockEstimates["annualGrowthPrc"]
+        stockData = json.load(f)
+
+    # Geschätztes jährliches Wachstum in %
+    annualGrowthPrc = stockData["annualGrowthEstimates"][0]["growthPrc"]
+
+    # Termine
+    if "dates" in stockData.keys():
+        stockDates = stockData["dates"]
+    else:
+        stockDates = None
 else:
-    print('\n +++ no data file +++\n')
+    print('\n +++ Please create a data file for ' + stockName + ' +++\n')
     sys.exit(1000)
 
-
+# Auslesen des Symbols für den zur Aktie zugehörigen Index
 index = ''
-# get the index
 if stockIndex == '':
     print('No index for ' + stockName + ' given..')
     index = {}
@@ -56,24 +67,12 @@ else:
             break
 
 if index == '':
-    print('please add the index "' + stockIndex + ' in the file ' + stocksFile)
+    print('\n +++ Please add the index "' + stockIndex + ' to the Index-Array in the file ' + stocksFile + ' +++\n')
     sys.exit(1000)
 
 
-
-# Laden der Daten
-stock = Stock(symbol=symbol,growthRateAnnualyPrc=int(annualGrowthPrc))
+# Laden der Daten der Aktie
+stock = Stock(symbol=symbol,growthRateAnnualyPrc=float(annualGrowthPrc),dates=stockDates)
 
 # Analysieren der Daten
 StockAnalyzer(stock,index["Symbol"]).printAnalysis()
-
-#msftCompare = StockCompare(symbol)
-#peerGroupList = msftCompare.getPeerGroup(symbol=symbol)
-#df = msftCompare.getPeerGroupChangePrc(peerGroupList)
-#mainValueCompareDF = msftCompare.comparePeerGoupMainValues(peerGroupList)
-
-#pdf_filename = symbol + '_peer_group_compare.pdf'
-#scPDF = StockComparePDF(pdf_filename)
-#scPDF.addPlot(df,xlabel='Date',ylabel='stock value growth in %',title=symbol + ' - Peer group comparison')
-#scPDF.addTable(mainValueCompareDF)
-#scPDF.closePDF()

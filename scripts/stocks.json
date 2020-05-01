@@ -7,7 +7,7 @@
             "data_file": "microsoft.json"
         },
         {
-            "Name": "Aroundtown SA",
+            "Name": "Aroundtown",
             "Symbol": "AT1.DE",
             "Index": "MDAX",
             "data_file": "aroundtown.json"
@@ -17,12 +17,22 @@
             "Symbol": "WAB",
             "Index": "",
             "data_file": "wabtec.json"
+        },
+        {
+            "Name": "Raytheon",
+            "Symbol": "RTX",
+            "Index": "S&P 500",
+            "data_file": "raytheon.json"
         }
     ],
     "Index": [
         {
             "Name": "Dow Jones",
             "Symbol": "^DJI"
+        },
+        {
+            "Name": "S&P 500",
+            "Symbol": "^GSPC"
         },
         {
             "Name": "DAX",
