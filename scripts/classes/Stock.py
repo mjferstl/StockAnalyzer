@@ -8,6 +8,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from pandas import DataFrame
 import pandas as pd
+import json
 
 # 3rd party modules
 import yfinance as yf
@@ -68,9 +69,15 @@ class Stock:
     DATE_FORMAT = '%Y-%m-%d'
 
 
-    def __init__(self,symbol='',growthRateAnnualyPrc=0,switchLoadData=LOAD_ALL_DATA,dates=None):
+    def __init__(self,stockName,switchLoadData=LOAD_ALL_DATA):
 
-        self.growthRateAnnualy = growthRateAnnualyPrc/100
+        stockData = loadStockFile(stockName)
+        self.symbol = stockData.stockSymbol
+        self.indexSymbol = stockData.indexSymbol
+        self.dates = stockData.dates
+        self.assumptions = stockData.assumptions
+
+        #self.growthRateAnnualy = growthRateAnnualyPrc/100
 
         # init variables for data, which will be loaded from yahoo finance
         self.info = None
@@ -92,10 +99,6 @@ class Stock:
 
         # storing recommendations for buying, holding and selling
         self.recommendations = None
-
-        # 
-        self.symbol = symbol
-        self.dates = dates
 
         # Load data
         if switchLoadData == self.LOAD_ALL_DATA:
@@ -443,3 +446,129 @@ class StockIndex():
 
             # load data from yahoo finance
             return yf.download(self.symbol, start=startDate, end=endDate)
+
+
+
+
+def loadStockFile(stockName,stocksFile='scripts/data/stocks.json'):
+
+    if not os.path.isfile(stocksFile):
+        raise Exception('The file "' + stocksFile + '" does not exist. This file needs to contain the stock list.')
+
+    with open(stocksFile) as f:
+        stockJSON = json.load(f)
+
+    # Finden der angegebenen Aktie im JSON-File
+    allStockNames = [s["Name"] for s in stockJSON["Stocks"]]
+    if stockName not in allStockNames:
+        raise ValueError('There is no stock named "' + stockName + '" in the file "' + stocksFile + '".')
+
+    stock = stockJSON["Stocks"][allStockNames.index(stockName)]
+
+    # Erstellen eines StockData Objekts
+    stockData = StockData(stockName=stock["Name"],stockSymbol=stock["Symbol"])
+
+    # Auslesen von Symbol und dem Index, in dem die Aktie gelistet ist
+    stockIndex = stock["Index"]
+    allIndexNames = [i["Name"] for i in stockJSON["Index"]]
+    if stockIndex not in allIndexNames:
+        raise ValueError('There is no index named "' + stockIndex + '" in the file "' + stocksFile + '".')
+
+    stockData.indexName = stockIndex
+    stockData.indexSymbol = stockJSON["Index"][allIndexNames.index(stockIndex)]["Symbol"]
+
+    # Öffnen des zur Aktie zugehoerigen Data-Files mit
+    # - der Wachstumsprognose
+    # - Daten fuer das DCF-Verfahren
+    # - Veroeffentlichungsterminen von Quartals- und Jahreszahlen
+    data_file = 'scripts/data/' + stock["data_file"]
+    if not os.path.isfile(data_file):
+        raise Exception('The file "' + data_file + '" does not exist.')
+
+
+    # Laden des zusaetzlichen Files mit den Daten zur Aktie
+    with open(data_file) as f:
+        stockExtraData = json.load(f)
+
+    # Annahmen auslesen
+    if "assumptions" not in stockExtraData.keys():
+        raise KeyError('The key "assumptions" is missing in the file "' + data_file + '".')
+
+    stockData.assumptions = stockExtraData["assumptions"]
+
+    if "dates" not in stockExtraData.keys():
+        raise KeyError('The key "dattes" is missing in the file "' + data_file + '".')
+
+    stockData.dates = stockExtraData["dates"]
+
+    return stockData
+
+    
+
+
+class StockData():
+
+    def __init__(self,stockName,stockSymbol,indexName='',indexSymbol='',assumptions={},dates=[]):
+
+        self._stockName = stockName
+        self._stockSymbol = stockSymbol
+        self._indexName = indexName
+        self._indexSymbol = indexSymbol
+        self._assumptions = assumptions
+        self._dates = dates
+
+    @property
+    def stockName(self):
+        return self._stockName
+
+    @stockName.setter
+    def stockName(self,name):
+        self._stockName = name
+
+    @property
+    def stockSymbol(self):
+        return self._stockSymbol
+
+    @stockSymbol.setter
+    def stockSymbol(self,symbol):
+        self._stockSymbol = symbol
+
+    @property
+    def indexName(self):
+        return self._indexName
+
+    @indexName.setter
+    def indexName(self,name):
+        self._indexName = name
+
+    @property
+    def indexSymbol(self):
+        return self._indexSymbol
+
+    @indexSymbol.setter
+    def indexSymbol(self,symbol):
+        self._indexSymbol = symbol
+
+    @property
+    def assumptions(self):
+        return self._assumptions
+
+    @assumptions.setter
+    def assumptions(self,assumptionsDict):
+        if not isinstance(assumptionsDict,dict):
+            raise TypeError('The assumptions need to be in a dict. ' + assumptionsDict + ' is not allowed.')
+        self._assumptions = assumptionsDict
+
+    @property
+    def dates(self):
+        return self._dates
+
+    @dates.setter
+    def dates(self,datesList):
+        if not isinstance(datesList,dict):
+            raise TypeError('The dates need to be in a dict. ' + datesList + ' is not allowed.')
+        self._dates = datesList
+
+    def __str__(self):
+        return '<StockData object "' + self._stockName + '" ("' + self._stockSymbol + '")>'
+    

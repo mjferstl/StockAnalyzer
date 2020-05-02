@@ -40,6 +40,8 @@ class StockAnalyzer():
             self.stockIndex = index
         elif isinstance(index,str):
             self.stockIndex = StockIndex(index)
+        else:
+            raise TypeError('The index needs to be a \'str\' or an object of StockIndex, but it is \'' + str(type(index)) + '.')
         
         self.stock = stock
 
@@ -88,6 +90,7 @@ class StockAnalyzer():
 
         return self.GrahamNumber
 
+
     def calcGrahamNumber(self):
         if (self.meanWeightedEps is not None) and (self.stock.isItemInBasicData(Stock.BOOK_VALUE_PER_SHARE)):
 
@@ -109,9 +112,9 @@ class StockAnalyzer():
         CF.fillna(CF.mean(), inplace=True) # TODO: NaN Werte werden durch Mittelwert ersetzt
 
         # Sortierung in aufsteigender Reihenfolge (alt -> neu)
-        dates = CF.index.values.copy() # copy ist hier wichtig, da sonst der urspruegliche DataFrame falsch geordnet wird
-        dates.sort()
-        CF_sorted = [CF.loc[date] for date in dates]
+        CF_sorted = []
+        for date in sorted(CF.index.values.copy()):
+            CF_sorted.append(CF.loc[date])
 
         # mittleres Wachstum des Cashflows der letzten Jahre
         growthAbs, growthPrc = [], []
@@ -121,12 +124,11 @@ class StockAnalyzer():
             # relatives Wachstum des Cashflows in Prozent
             growthPrc.append(growthAbs[-1]/CF_sorted[y-1]*100)
         
-        # mittleres relatives Wachstum
-        #print('growthPrc: ' + str(growthPrc))
+        # mittleres Wachstum
         meanGrowthPrc = sum(growthPrc)/len(growthPrc)
-        print('mittleres Cashflow-Wachstum der letzten {years:.0f} Jahre: {cfGrowth:.2f}%'.format(years=len(CF_sorted),cfGrowth=meanGrowthPrc))
+        print('* mittleres FCF-Wachstum der letzten {years:.0f} Jahre: {cfGrowth:.2f}%'.format(years=len(CF_sorted),cfGrowth=meanGrowthPrc))
 
-        discountRate = self.stock.growthRateAnnualy # discount
+        discountRate = self.stock.assumptions["discountRate"]/100
         presentValue = [] # present value
         # Scheife ueber alle zu betrachtenden Jahre
         for year in range(1,self.investmentHorizon+1):
@@ -189,23 +191,19 @@ class StockAnalyzer():
         # Bewertung: 0-2 von 3 -> halten
         pass
 
+
     # Funktion zur Berechnung des sog. "inneren Wertes" der Aktie
     def getFairValue(self):
         if self.fairValue is None:
 
-            if self.stock.growthRateAnnualy is None:
+            if self.stock.assumptions["growth_year_1_to_5"] is None:
                 raise ValueError('The expected annualy growth rate for ' + self.stock.symbol + ' (' + self.stock.name + ') is of type None')
             if not self.stock.isItemInBasicData(Stock.PE_RATIO):
                 raise KeyError('The P/E for ' + self.stock.name + ' is not existant')
             
-
             # calclate the new growth rate, as the dividend yield gets added
-            growthRateAnnualy = self.stock.growthRateAnnualy# + self.dividendYield
-            if growthRateAnnualy != self.stock.growthRateAnnualy:
-                print("growthRateAnnualy: " + str(self.stock.growthRateAnnualy))
-                print("The annualy growth rate gets increased by the dividend yield of {divYield:5.2f}%. New annualy growth rate: {grwRate:5.2f}".format(divYield=self.dividendYield,grwRate=growthRateAnnualy))
-
-            self.fairValue = calcFairValue(self.meanWeightedEps,growthRateAnnualy,self.stock.getBasicDataItem(Stock.PE_RATIO),self.stock.growthRateAnnualy,StockAnalyzer.marginOfSafety,StockAnalyzer.investmentHorizon)
+            growthRateAnnualy = self.stock.assumptions["growth_year_1_to_5"]/100
+            self.fairValue = calcFairValue(self.meanWeightedEps,growthRateAnnualy,self.stock.getBasicDataItem(Stock.PE_RATIO),self.stock.assumptions["discountRate"],StockAnalyzer.marginOfSafety,StockAnalyzer.investmentHorizon)
 
         return self.fairValue
 
@@ -475,7 +473,7 @@ class StockAnalyzer():
             'Analysis:\n' + \
             ' - margin of safety: {marginOfSafety:2.0f}%\n'.format(marginOfSafety=StockAnalyzer.marginOfSafety*100) + \
             ' - investment horizon: {years:.0f} years\n'.format(years=self.investmentHorizon) + \
-            ' - exp. annual growth: {grwth:.1f} %\n'.format(grwth=self.stock.growthRateAnnualy*100) + \
+            ' - exp. annual growth: {grwth:.1f} %\n'.format(grwth=self.stock.assumptions["growth_year_1_to_5"]) + \
             '\n' + \
             '{str:{strFormat}}{val:6.2f}'.format(str="Fair value:",val=self.fairValue,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n' + \
             strGrahamNumber + \
@@ -792,6 +790,7 @@ class LevermannScore():
                 LevermannScore -= 1
         else:
             print('\n +++ Fehlende Daten: Datum der Veröffentichung der Quartalszahlen fehlt +++\n')
+            print(self.stock.dates)
 
 
         # Gewinnrevisionen
@@ -955,41 +954,65 @@ class LevermannScore():
         
         if (self.returnOnEquity is not None):
             print('1. Eigenkapitalrendite LJ: {roe:.2f}%'.format(roe=self.returnOnEquity))
+        else:
+            print('1. Eigenkapitalrendite LJ: MISSING')
 
         if (self.EbitMarge is not None):
             print('2. EBIT-Marge LJ: {ebitm:.2f}%'.format(ebitm=self.EbitMarge))
+        else:
+            print('2. EBIT-Marge LJ: MISSING')
 
         if (self.EKratio is not None):
             print('3. Eigenkapitalquote LJ: {ekr:.2f}%'.format(ekr=self.EKratio))
+        else:
+            print('3. Eigenkapitalquote LJ: MISSING')
 
         if (self.KGV_5y is not None):
             print('4. KGV 5 Jahre: {kgv:.2f}'.format(kgv=self.KGV_5y))
+        else:
+            print('4. KGV 5 Jahre: MISSING')
 
         if (self.KGV_now is not None):
             print('5. KGV aktuell: {kgv:.2f}'.format(kgv=self.KGV_now))
+        else:
+            print('5. KGV aktuell: MISSING')
 
         if (self.recommendations is not None):
             print('6. Analystenmeinungen: {rec:.2f}'.format(rec=self.recommendations))
+        else:
+            print('6. Analystenmeinungen: MISSING')
 
         if (self.quarterlyReaction is not None):
             print('7. Reaktion auf Quartalszahlen: {reaction:.2f}%'.format(reaction=self.quarterlyReaction))
+        else:
+            print('7. Reaktion auf Quartalszahlen: MISSING')
 
         print('8. Gewinnrevision FEHLT NOCH')
 
         if (self.sharePriceRelative_6m is not None):
             print('9. Kurs heute gg. Kurs vor 6 Monaten: {spr:.2f}%'.format(spr=self.sharePriceRelative_6m))
+        else:
+            print('9. Kurs heute gg. Kurs vor 6 Monaten: MISSING')
             
         if (self.sharePriceRelative_1y is not None):
             print('10. Kurs heute gg. Kurs vor 1 Jahr: {spr:.2f}%'.format(spr=self.sharePriceRelative_1y))
+        else:
+            print('10. Kurs heute gg. Kurs vor 1 Jahr: MISSING')
 
         if (self.sharePriceMomentum is not None):
             print('11. Kursmomentum steigend: {mom}'.format(mom=self.sharePriceMomentum))
+        else:
+            print('11. Kursmomentum steigend: MISSING')
 
         if (self.reversal_3m is not None):
             print('12. Dreimonatsreversal: {rev}'.format(rev=self.reversal_3m))
+        else:
+            print('12. Dreimonatsreversal: MISSING')
 
         if (self.profitGrowth is not None):
             print('13. Gewinnwachstum: {pgrw:.2f}%'.format(pgrw=self.profitGrowth*100))
+        else:
+            print('13. Gewinnwachstum: MISSING')
 
         print('-'*sepLineLength)
         print('Levermann score: {ls} ({comment}) !unvollständig!'.format(ls=self.Score,comment=self.Comment))

@@ -11,18 +11,6 @@
             "Symbol": "AT1.DE",
             "Index": "MDAX",
             "data_file": "aroundtown.json"
-        },
-        {
-            "Name": "Wabtec",
-            "Symbol": "WAB",
-            "Index": "",
-            "data_file": "wabtec.json"
-        },
-        {
-            "Name": "Raytheon",
-            "Symbol": "RTX",
-            "Index": "S&P 500",
-            "data_file": "raytheon.json"
         }
     ],
     "Index": [
