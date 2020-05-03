@@ -19,7 +19,7 @@ main_path = currentFolder.replace('classes','')
 if main_path not in sys.path:
     sys.path.append(main_path)
 
-from utils.yfinance_extension import load_EPS, load_CashFlow, load_KeyStatistics
+from utils.yfinance_extension import loadExtraIncomeStatementData, load_CashFlow, load_KeyStatistics
 from utils.generic import mergeDataFrame, npDateTime64_2_str
 from classes.FinnhubAPI import FinnhubClient
 
@@ -69,15 +69,22 @@ class Stock:
     DATE_FORMAT = '%Y-%m-%d'
 
 
-    def __init__(self,stockName,switchLoadData=LOAD_ALL_DATA):
+    def __init__(self,stockName='',stockSymbol=''):
 
-        stockData = loadStockFile(stockName)
-        self.symbol = stockData.stockSymbol
-        self.indexSymbol = stockData.indexSymbol
-        self.dates = stockData.dates
-        self.assumptions = stockData.assumptions
+        self.symbol = None
+        self.indexSymbol = None
+        self.dates = None
+        self.assumptions = None
 
-        #self.growthRateAnnualy = growthRateAnnualyPrc/100
+        if stockName != '':
+            stockData = loadStockFile(stockName)
+            self.symbol = stockData.stockSymbol
+            self.indexSymbol = stockData.indexSymbol
+            self.dates = stockData.dates
+            self.assumptions = stockData.assumptions
+        
+        if stockSymbol != '':
+            self.symbol = stockSymbol
 
         # init variables for data, which will be loaded from yahoo finance
         self.info = None
@@ -100,11 +107,7 @@ class Stock:
         # storing recommendations for buying, holding and selling
         self.recommendations = None
 
-        # Load data
-        if switchLoadData == self.LOAD_ALL_DATA:
-            self.loadMainData()
-        elif switchLoadData == self.LOAD_BASIC_DATA:
-            self.loadBasicData()
+        self.loadMainData()
 
 
     def loadMainData(self):
@@ -113,7 +116,7 @@ class Stock:
         self.getCurrency()
         self.getCurrentStockValue()
         self.getEarningsPerShare()
-        self.getEpsHistory()
+        self.getExtraIncomeStatementDate()
         self.getDividend()
         self.getPriceEarnigsRatio()
         self.getBalanceSheet()
@@ -125,10 +128,6 @@ class Stock:
 
         # monthly historical data
         self.historicalData = self.ticker.history(period="5y", interval = "1wk")
-
-
-    def loadBasicData(self):
-        self.getStockName()
 
 
     def calcRelativeHistoricalData(self):
@@ -171,8 +170,8 @@ class Stock:
             print('Information loaded successfully')
 
 
-    def getEpsHistory(self):
-        df = load_EPS(self.symbol)
+    def getExtraIncomeStatementDate(self):
+        df = loadExtraIncomeStatementData(self.symbol)
         
         # add the data to the financialData data frame
         self.financialData = mergeDataFrame(self.financialData,df)
@@ -395,6 +394,10 @@ class Stock:
             return value
 
 
+    def getPeerGroup(self):
+        return FinnhubClient(self.symbol).getPeerGroup()
+
+
     # Funktion zur Formattierung der Ausgabe
     def __str__(self):
         return '<Stock Object \'{stockName}\'>'.format(stockName=self.name)
@@ -496,8 +499,9 @@ def loadStockFile(stockName,stocksFile='scripts/data/stocks.json'):
     return stockData
 
     
-
-
+"""
+    Class for storing stock data from the file
+"""
 class StockData():
 
     def __init__(self,stockName,stockSymbol,indexName='',indexSymbol='',assumptions={},dates=[]):

@@ -1,22 +1,21 @@
-
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from classes.Stock import Stock, StockIndex
-from classes.StockCompare import StockCompare, StockComparePDF
+from classes.Stock import Stock
 from classes.StockAnalyzer import StockAnalyzer
 
-import json
 
 ### Eingabe Start
 
-stockName = 'Microsoft'
+stockName = 'Aroundtown'
 
 ### Eingabe Ende
-
 
 # Laden der Daten der Aktie
 stock = Stock(stockName=stockName)
 
 # Analysieren der Daten
-StockAnalyzer(stock,stock.indexSymbol).printAnalysis()
+StockAnalyzer(stock,stock.indexSymbol).printBasicAnalysis()
+
+for peer in stock.getPeerGroup().remove(stock.symbol):
+    StockAnalyzer(Stock(stockSymbol=peer)).printBasicAnalysis()

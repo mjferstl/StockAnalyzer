@@ -18,8 +18,6 @@ from utils.generic import npDateTime64_2_str
 class StockAnalyzer():
 
     # value shared across all class instances
-    # investment time: 10 years
-    investmentHorizon = 10
 
     # variables
     NET_MARGIN = 'net margin'
@@ -44,8 +42,6 @@ class StockAnalyzer():
         
         self.stock = stock
 
-        self.marginOfSafety = self.stock.assumptions["margin_of_safety"]
-
         # variables for anayzing the stock
         # EPS
         self.meanWeightedEps = None
@@ -57,8 +53,8 @@ class StockAnalyzer():
         self.getPriceEarningsRatio()
 
         self._GrahamNumber = None
-        self.recommendations = None
-        self.LevermannScore = None
+        self._Recommendations = None
+        self._LevermannScore = None
 
         #
         self._NetMargin = None
@@ -67,6 +63,7 @@ class StockAnalyzer():
         self._FreeCashFlowBySales = None
         self._PriceToSales = None
         self._PriceToEarnings = None
+        self._PresentShareValue = None
 
         self.dividendYield = 0
 
@@ -77,13 +74,10 @@ class StockAnalyzer():
     def analyzeStock(self):
         self.calcGrahamNumber()
         self.calcDCF()
-        self.calcLevermannScore()
-        self.recommendations = self.getRecommendations()
-        self.NetMargin
         self.calcReturnOnEquity()
         self.calcReturnOnAssets()
         self.calcFreeCashFlowBySales()
-        self.PriceToSales
+
 
     @property
     def GrahamNumber(self):
@@ -121,7 +115,27 @@ class StockAnalyzer():
             self.calcNetMargin()
         return self._NetMargin
 
+    @property
+    def LevermannScore(self):
+        if self._LevermannScore is None:
+            self.calcLevermannScore()
+        return self._LevermannScore
 
+    @property
+    def Recommendations(self):
+        if self._Recommendations is None:
+            self._Recommendations = self.getLatestRecommendations()
+        return self._Recommendations
+
+    @property
+    def PresentShareValue(self):
+        if self._PresentShareValue is None:
+            self.calcDCF()
+        return self._PresentShareValue
+
+    """
+        Berechnung der Graham Number
+    """
     def calcGrahamNumber(self):
         if (self.meanWeightedEps is not None) and (self.stock.isItemInBasicData(Stock.BOOK_VALUE_PER_SHARE)):
 
@@ -135,67 +149,74 @@ class StockAnalyzer():
         else:
             self._GrahamNumber = 0
 
-
+    """
+        Discounted Cash Flow Verfahren
+    """
     def calcDCF(self):
-        # Free Chashflow der letzten Jahre
-        CF = self.stock.financialData.loc['freeCashFlow',:].copy()
+        if self.stock.assumptions is not None:
+            # Free Chashflow der letzten Jahre
+            CF = self.stock.financialData.loc['freeCashFlow',:].copy()
 
-        CF.fillna(CF.mean(), inplace=True) # TODO: NaN Werte werden durch Mittelwert ersetzt
+            CF.fillna(CF.mean(), inplace=True) # TODO: NaN Werte werden durch Mittelwert ersetzt
 
-        # Sortierung in aufsteigender Reihenfolge (alt -> neu)
-        CF_sorted = []
-        for date in sorted(CF.index.values.copy()):
-            CF_sorted.append(CF.loc[date])
+            # Sortierung in aufsteigender Reihenfolge (alt -> neu)
+            CF_sorted = []
+            for date in sorted(CF.index.values.copy()):
+                CF_sorted.append(CF.loc[date])
 
-        # Berechnung 
-        model = linearRegression(range(len(CF_sorted)),CF_sorted,plotResult=False)
-        FCFstartValue = model.predict(np.array([len(CF_sorted)-1]).reshape(1, -1))[0]
-        
-        # Wachstumsrate der naechsten 10 Jahre
-        discountRate = self.stock.assumptions["discountRate"]/100
+            # Berechnung 
+            model = linearRegression(range(len(CF_sorted)),CF_sorted,plotResult=False)
+            FCFstartValue = model.predict(np.array([len(CF_sorted)-1]).reshape(1, -1))[0]
+            
+            # Wachstumsrate der naechsten 10 Jahre
+            discountRate = self.stock.assumptions["discountRate"]/100
 
-        # Free Cash Flow der naechsten 5 Jahre
-        growthRate = self.stock.assumptions['growth_year_1_to_5']/100
-        discountedCashFlow = []
-        FCF = []
-        for i in range(1,6):
-            FCF.append((FCFstartValue*(1+growthRate)**i))
-            discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**i))
+            # Free Cash Flow der naechsten 5 Jahre
+            growthRate = self.stock.assumptions['growth_year_1_to_5']/100
+            discountedCashFlow = []
+            FCF = []
+            for i in range(1,6):
+                FCF.append((FCFstartValue*(1+growthRate)**i))
+                discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**i))
 
-        # Free Cash Flow der Jahre 6-10
-        growthRate = self.stock.assumptions['growth_year_6_to_10']/100
-        for i in range(6,11):
-            FCF.append((FCFstartValue*(1+growthRate)**i))
-            discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**i))
+            # Free Cash Flow der Jahre 6-10
+            growthRate = self.stock.assumptions['growth_year_6_to_10']/100
+            for i in range(6,11):
+                FCF.append((FCFstartValue*(1+growthRate)**i))
+                discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**i))
 
-        # Free Cash Flow insgesamt ab dem 11. Jahr (perpetuity value) im heutigen Wert (discounted perpetuity value)
-        # - FCF_10: Free Cash Flow in 10 Jahren
-        # - growthRate_10: Wachstum des Free Cash Flows nach dem 10. Jahr
-        # Formel: FCF_10 * (1 + growthRate_10) / ((discountRate - growthRate_10) * (1 + discountRate))
-        growthRate = self.stock.assumptions['growth_year_10ff']/100
-        # perpetuity value
-        FCF.append((FCF[-1] * (1 + growthRate)) / (discountRate - growthRate))
-        # discounted perpetuity value
-        discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**10))
+            # Free Cash Flow insgesamt ab dem 11. Jahr (perpetuity value) im heutigen Wert (discounted perpetuity value)
+            # - FCF_10: Free Cash Flow in 10 Jahren
+            # - growthRate_10: Wachstum des Free Cash Flows nach dem 10. Jahr
+            # Formel: FCF_10 * (1 + growthRate_10) / ((discountRate - growthRate_10) * (1 + discountRate))
+            growthRate = self.stock.assumptions['growth_year_10ff']/100
+            # perpetuity value
+            FCF.append((FCF[-1] * (1 + growthRate)) / (discountRate - growthRate))
+            # discounted perpetuity value
+            discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**10))
 
-        # Summe der, auf den aktuellen Zeitpunkt bezogenen, zukuenfitgen Cashflows
-        totalEquityValue = sum(discountedCashFlow)
+            # Summe der, auf den aktuellen Zeitpunkt bezogenen, zukuenfitgen Cashflows
+            totalEquityValue = sum(discountedCashFlow)
 
-        # Wert einer Aktie zum aktuellen Zeitpunkt auf Grundlage aller zkünftigen Free Cash Flows
-        # Beruecksichtigung einer Margin of safety
-        marginOfSafety = self.marginOfSafety/100
-        sharesOutstanding = self.stock.keyStatistics[Stock.SHARES_OUTSTANDING]
-        perShareValue = totalEquityValue/sharesOutstanding/(1 + marginOfSafety)
+            # Wert einer Aktie zum aktuellen Zeitpunkt auf Grundlage aller zkünftigen Free Cash Flows
+            # Beruecksichtigung einer Margin of safety
+            marginOfSafety = self.stock.assumptions["margin_of_safety"]/100
+            sharesOutstanding = self.stock.keyStatistics[Stock.SHARES_OUTSTANDING]
+            perShareValue = totalEquityValue/sharesOutstanding/(1 + marginOfSafety)
 
-        self.presentShareValue = perShareValue
+            self._PresentShareValue = perShareValue
+        else:
+            print(' +++ Discounted Cash Flow Analysis failed du to missing data +++ ')
 
 
-    # Berechnung des Levermann scores
+    """
+        Berechnung des Levermann Scores
+    """
     def calcLevermannScore(self):
         if (self.stockIndex is not None):
-            self.LevermannScore = LevermannScore(self.stock,self.stockIndex)
+            self._LevermannScore = LevermannScore(self.stock,self.stockIndex)
         else:
-            print('Zur Berechnung des Levermann scores muss ein Index angegeben werden')
+            print('Zur Berechnung des Levermann Scores muss ein Index angegeben werden')
 
     
     def calcPiotroskiFScore(self):
@@ -231,13 +252,7 @@ class StockAnalyzer():
         # Bewertung: 3 von 3 negativ -> verkaufen
         # Bewertung: 0-2 von 3 -> halten
         pass
-
-
-    def getMeanWeightedEPS(self):
-        if (self.meanWeightedEps is None) or (self.epsWeightYears is None):
-            self.calcWeightedEps()
-
-        return self.meanWeightedEps, self.epsWeightYears
+    
 
     def calcWeightedEps(self):
 
@@ -274,20 +289,19 @@ class StockAnalyzer():
         self.priceEarningsRatio = self.stock.getBasicDataItem(Stock.PE_RATIO)
 
 
-    def getRecommendations(self):
-        if self.recommendations is None:
-            recommendations = FinnhubClient(self.stock.symbol).getRecommendationsDataFrame()
-            self.recommendations = recommendations
-        
-        return self.recommendations
+    def loadRecommendations(self):
+        self._Recommendations = FinnhubClient(self.stock.symbol).getRecommendationsDataFrame()
 
 
     def getLatestRecommendations(self):
-        latestRecommendations = self.getRecommendations().iloc[0,:]
+        latestRecommendations = self.Recommendations.iloc[0,:]
         latest = latestRecommendations[['strongBuy','buy','hold','sell','strongSell']]
         return latest
 
 
+    """
+        Berechnung des Nettogewinns
+    """
     def calcNetMargin(self):
         if self.stock.financialData is None:
             raise Exception('The stock has no historical financial data. "Total Revenue" and "Net Income" needed!')
@@ -387,62 +401,38 @@ class StockAnalyzer():
             self._PriceToSales
 
 
-    def printAnalysis(self):
+    def calcGrowth(self,valueList,percentage=False):
+        if percentage:
+            factor = 100
+        else: 
+            factor = 1
+        return [(valueList[i]-valueList[i-1])/valueList[i-1]*factor for i in range(1,len(valueList))]
+
+
+    def printBasicAnalysis(self):
 
         if self.priceEarningsRatio is None:
             self.getPriceEarningsRatio()
 
         # variables for formatting the console output
         stringFormat = "35s"
-        dispLineLength = 50
+        dispLineLength = 55
         sepString = '-'*dispLineLength + '\n'
 
-        # string to print the dividend and the dividend yield
-        strDividend = ''
-        if self.stock.isItemInBasicData(Stock.DIVIDEND):
-            strDividendYield = ''
-
-            stockPrice = self.stock.getBasicDataItem(Stock.MARKET_PRICE)
-            if stockPrice is not None:
-                strDividendYield = ' (' + u"ca. " + '{divYield:3.1f}%)'.format(divYield=self.stock.getBasicDataItem(Stock.DIVIDEND)/stockPrice*100)
-            strDividend = '{str:{strFormat}}{div:6.2f}'.format(str='Dividend:',div=self.stock.getBasicDataItem(Stock.DIVIDEND),strFormat=stringFormat) + ' ' + self.stock.currencySymbol + strDividendYield + '\n'
-
-        strWeightedEps = ''
-        if (self.meanWeightedEps != self.stock.getBasicDataItem(Stock.EARNINGS_PER_SHARE)) and (self.epsWeightYears is not None):
-            strEntry = 'avg. EPS ({years:.0f}y):'.format(years=self.epsWeightYears)
-            strWeightedEps = '{str:{strFormat}}{epsw:6.2f}'.format(str=strEntry,epsw=self.meanWeightedEps,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
+        # format margin around stock name
+        stockNameOutput = self.stock.name
+        if (len(self.stock.name) < dispLineLength):
+            margin = int((dispLineLength-len(self.stock.name))/2)
+            stockNameOutput = ' '*margin + self.stock.name + ' '*margin
 
         # string to print the graham number
         strGrahamNumber = '{str:{strFormat}}{gn:6.2f}'.format(str='Graham number:',gn=self.GrahamNumber,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
-
-        strNetPresentValue = ''
-        if self.presentShareValue is not None:
-            if self.presentShareValue > self.stock.getBasicDataItem(Stock.MARKET_PRICE):
-                strNPVcomment = 'time to invest!'
-            else:
-                strNPVcomment = 'too expensive...'
-            strNetPresentValue = '{str:{strFormat}}{gn:6.2f}'.format(str='Present share value (DCF):',gn=self.presentShareValue,strFormat=stringFormat) + \
-                ' ' + self.stock.currencySymbol + ' (' + strNPVcomment + ')\n'
 
         # string to print the stock's current value
         strCurrentStockValue = ''
         stockPrice = self.stock.getBasicDataItem(Stock.MARKET_PRICE)
         if (stockPrice is not None):
             strCurrentStockValue = '{str:{strFormat}}{val:6.2f}'.format(str="Current share price:",val=stockPrice,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
-
-        # Free Cash flow bezogen auf die Einnahmen
-        limit = 5/100.0
-        isGood = sum([1 if fcfps > limit else 0 for fcfps in self.FreeCashFlowBySales]) == len(self.FreeCashFlowBySales)
-        avgFcfps = sum(self.FreeCashFlowBySales)/len(self.FreeCashFlowBySales)
-        if isGood: # groesser als 5%
-            strFcfpsComment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
-        elif avgFcfps > limit:
-                strFcfpsComment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
-        else:
-            strFcfpsComment = '?'
-        # String fuer die Ausgabe
-        strFreeCashFlowPerSales = '{str:{strFormat}}{val:6.2f}'.format(str="Free Cash Flow/Sales (" + str(len(self.FreeCashFlowBySales)) + "y avg.):",val=avgFcfps*100,strFormat=stringFormat) + \
-            '% (' + strFcfpsComment + ')\n'    
 
         # Nettogewinn
         limit = 15/100.0
@@ -462,20 +452,6 @@ class StockAnalyzer():
         strNetMargin = '{str:{strFormat}}{val:6.2f}'.format(str="Net margin (" + str(len(self.NetMargin)) + "y avg.):",val=avgNetMargin*100,strFormat=stringFormat) + \
             '% (' + strNetMarginComment + ')\n'
 
-        # Eigenkapitalrenidte
-        limit = 15/100.0
-        isGood = sum([1 if roe > limit else 0 for roe in self.ReturnOnEquity]) == len(self.ReturnOnEquity)
-        avgRoE = sum(self.ReturnOnEquity)/len(self.ReturnOnEquity)
-        if isGood: 
-            strRoEcomment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
-        elif avgRoE > limit:
-            strRoEcomment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
-        else:
-            strRoEcomment = '?'
-        # String fuer die Ausgabe
-        strReturnOnEquity = '{str:{strFormat}}{val:6.2f}'.format(str="Return on equity (" + str(len(self.ReturnOnEquity)) + "y avg.):",val=avgRoE*100,strFormat=stringFormat) + \
-            '% (' + strRoEcomment + ')\n'
-
         # Kapitalrendite
         limit = 6/100.0
         isGood = sum([1 if roa >= limit else 0 for roa in self._ReturnOnAssets]) == len(self.ReturnOnAssets)
@@ -491,42 +467,250 @@ class StockAnalyzer():
             '% (' + strRoAcomment + ')\n'
 
 
-        # format margin around stock name
-        stockNameOutput = self.stock.name
-        if (len(self.stock.name) < dispLineLength):
-            margin = int((dispLineLength-len(self.stock.name))/2)
-            stockNameOutput = ' '*margin + self.stock.name + ' '*margin
+        """
+            Marktkapitalisierung
+        """
+        strMarketCapComment = ''
+        # Wenn die Marktkapitalisierung geringer als 500Mio ist, dann wird eine Warnung ausgegeben
+        if self.stock.keyStatistics[Stock.MARKET_CAP] < 500*10**6:
+            strMarketCapComment = '!ACHTUNG: kleines Unternehmen!'
+            strSize = 'Mio.'
+            marketCap = self.stock.keyStatistics[Stock.MARKET_CAP]/10**6
+        if self.stock.keyStatistics[Stock.MARKET_CAP] > 10**9:
+            strSize = 'Mrd.'
+            marketCap = self.stock.keyStatistics[Stock.MARKET_CAP]/10**9
+        # String fuer die Ausgabe
+        strMarketCap = '{str:{strFormat}}{val:6.2f}'.format(str="Market capitalization: ",val=marketCap,strFormat=stringFormat) + \
+            ' ' + strSize + ' ' + self.stock.currencySymbol + ' ' + strMarketCapComment +'\n'
 
+        """
+            Operating Income (Pruefung, ob die Firma jemals Geld verdient hat)
+        """
+        operatingIncome = self.stock.financialData.loc['Operating Income'].copy()
+        opIncList, opIncSize = [], 'Mrd.'
+        strYear, strValue = ' '*6 + '|', ' '*6 + '|'
+        for date in list(sorted(operatingIncome.index.values.copy())):
+            value = operatingIncome.loc[date]/10**9 # in Mrd 
+            opIncList.append(value)
+            strYear = strYear   + '  {year}  |'.format(year=date[:4])
+            strValue = strValue + ' {v:6.2f} |'.format(v=value)
+
+        # Waehrung
+        strValue = strValue + ' ' + opIncSize + ' ' + self.stock.currencySymbol
+
+        # mittleres Wachstum
+        operatingIncomeGrowth = self.calcGrowth(opIncList,percentage=True)
+        avgOperatingIncomeGrowth = sum(operatingIncomeGrowth)/len(operatingIncomeGrowth)
+        # String fuer die Ausgabe
+        strOperatingIncome = '{str:{strFormat}}{val:6.2f}'.format(str="Operating Income Growth: ",val=avgOperatingIncomeGrowth,strFormat=stringFormat) + \
+            '%\n' + strYear + '\n' + strValue + '\n'
+
+        """
+            Cash flow from operating activities
+        """
+        totalCashFlowFromOperations = self.stock.financialData.loc['Total Cash From Operating Activities'].copy()
+
+        cashFromOpActList = []
+        strYear, strValue = ' '*6 + '|', ' '*6 + '|'
+        for date in list(sorted(totalCashFlowFromOperations.index.values.copy())):
+            value = totalCashFlowFromOperations.loc[date]/10**9 # in Mrd 
+            cashFromOpActList.append(value)
+            strYear = strYear   + '  {year}  |'.format(year=date[:4])
+            strValue = strValue + ' {v:6.2f} |'.format(v=value)
+
+        # Waehrung
+        strValue = strValue + ' ' + opIncSize + ' ' + self.stock.currencySymbol
+
+        # Mittleres Wachstum
+        cashFromOpActGrowth = self.calcGrowth(cashFromOpActList,percentage=True)
+        avgCashFromOpActGrowth = sum(cashFromOpActGrowth)/len(cashFromOpActGrowth)
+        # String fuer die Ausgabe
+        strCashFlowFromOperatingActivities = '{str:{strFormat}}{val:6.2f}'.format(str="Cash flow from operating activities growth: ",val=avgCashFromOpActGrowth,strFormat=stringFormat) + \
+            '% \n' + strYear + '\n' + strValue + '\n'
+
+        """
+            ROE - Return on Equity - Eigenkapitalrenidte
+            Financial Leverage
+        """
+        equity = self.stock.financialData.loc["Total Stockholder Equity"].copy()
+        assets = self.stock.financialData.loc["Total Assets"].copy()
+
+        leverageList = []
+        strYear, strROE, strLeverage = ' '*6 + '|', '- ROE |', '- LEV |'
+        for date in list(sorted(self.ReturnOnEquity.index.values.copy())):
+            strYear = strYear   + '  {year}  |'.format(year=date[:4])
+            strROE = strROE + ' {v:6.2f} |'.format(v=self.ReturnOnEquity.loc[date]*100) # in Prozent
+            leverageList.append(assets.loc[date]/equity.loc[date])
+            strLeverage = strLeverage + ' {v:6.2f} |'.format(v=leverageList[-1])
+
+        # Einheit
+        strROE = strROE + ' %'
+
+        # Mittleres Wachstum
+        avgROE = sum(self.ReturnOnEquity)/len(self.ReturnOnEquity)*100 # in Prozent
+        if avgROE >= 15:
+            strRoeComment = '      mittleres ROE > 15% --> sehr gut'
+        elif avgROE >= 10:
+            strRoeComment = '      mittleres ROE > 10% --> gut'
+        else:
+            strRoeComment = '      mittleres ROE < 10% --> ACHTUNG!'
+
+        # Beurteilung der Leverage
+        model = linearRegression(range(len(leverageList)),leverageList)
+        # Mittelwert
+        avgLeverage = sum(leverageList)/len(leverageList)
+        if avgLeverage > 3.5:
+            strLeverageComment = ' '*6 + 'hohe Leverage (> 3.5) --> ACHTUNG!'
+        elif (avgLeverage > 2.5) and (model.coef_/avgLeverage > 0.2):
+            strLeverageComment = ' '*6 + 'Leverage steigt schnell an --> ACHTUNG!'
+        else:
+            strLeverageComment = ' '*6 + 'Leverage ok'
+
+        # String fuer die Ausgabe
+        strReturnOnEquity = '{str:{strFormat}}{val:6.2f}'.format(str="Return on Equity: ",val=avgROE,strFormat=stringFormat) + \
+            '% \n' + strYear + '\n' + strROE + '\n' + strLeverage + '\n' + strRoeComment + '\n' + strLeverageComment + '\n'
+
+
+        """
+            Earnings Growth - Gewinnwachstum
+        """
+        earnings = self.stock.financialData.loc['Net Income'].copy()
+
+        earningsList = []
+        strYear, strEarnings = ' '*6 + '|', ' '*6 + '|'
+        for date in list(sorted(earnings.index.values.copy())):
+            earningsList.append(earnings.loc[date])
+            strYear = strYear   + '  {year}  |'.format(year=date[:4])
+            strEarnings = strEarnings + ' {v:6.2f} |'.format(v=earnings.loc[date]/10**9)
+
+        # Waehrung
+        strEarnings = strEarnings + ' Mrd. ' + self.stock.currencySymbol
+
+        earningsGrowth = self.calcGrowth(earningsList,percentage=True)
+        avgEarningsGrowth = sum(earningsGrowth)/len(earningsGrowth)
+        # String fuer die Ausgabe
+        strEarningsGrwoth = '{str:{strFormat}}{val:6.2f}'.format(str="Earnings Growth: ",val=avgEarningsGrowth,strFormat=stringFormat) + \
+            '% \n' + strYear + '\n' + strEarnings + '\n'
+
+        """
+            Debt
+        """
+
+        """
+            Free Cash Flow
+        """
+        freeCashFlow = self.stock.financialData.loc['freeCashFlow'].copy()
+        sales = self.stock.financialData.loc['Total Revenue'].copy()
+
+        freeCashFlowToSales = []
+        strYear, strValue = ' '*6 + '|', ' '*6 + '|'
+        for date in list(sorted(freeCashFlow.index.values.copy())):
+            freeCashFlowToSales.append(freeCashFlow.loc[date]/sales.loc[date]*100) # in Prozent
+            strYear = strYear   + '  {year}  |'.format(year=date[:4])
+            strValue = strValue + ' {v:6.2f} |'.format(v=freeCashFlowToSales[-1])
+
+        # Einheit
+        strValue = strValue + ' %'
+
+        # Mittelwert und Bewertung
+        avgFreeCashFlowPerSales = sum(freeCashFlowToSales)/len(freeCashFlowToSales)
+        if avgFreeCashFlowPerSales >= 10:
+            strFCF_Sales_comment = ' '*6 + '--> sehr gut'
+        if avgFreeCashFlowPerSales >= 5:
+            strFCF_Sales_comment = ' '*6 + '--> gut'
+        else:
+            strFCF_Sales_comment = ' '*6 + '-> Prüfen, ob das Unternehmen stark wächst!'
+
+        # String fuer die Ausgabe
+        strFreeCashFlowPerSales = '{str:{strFormat}}'.format(str="Free Cash Flow / Sales: ",strFormat=stringFormat) + \
+            '\n' + strYear + '\n' + strValue + ' \n' + strFCF_Sales_comment + '\n'
+
+        
+        """
+            Number of shares
+        """
+        averageShares = self.stock.financialData.loc['dilutedAverageShares'].copy()
+
+        avgSharesList = []
+        strYear, strValue = ' '*6 + '|', ' '*6 + '|'
+        for date in list(sorted(averageShares.index.values.copy())):
+            avgSharesList.append(averageShares.loc[date]/10**6) # in Millionen
+            strYear = strYear   + '  {year}  |'.format(year=date[:4])
+            strValue = strValue + ' {v:5.0f}  |'.format(v=avgSharesList[-1])
+
+        # Einheit
+        strValue = strValue + ' %'
+
+        # Mittelwert und Bewertung
+        averageSharesGrowth = self.calcGrowth(avgSharesList,percentage=True)
+        avgAverageSharesGrowth = sum(averageSharesGrowth)/len(averageSharesGrowth)
+        if avgAverageSharesGrowth < 0:
+            strAverageShares = ' '*6 + 'Aktienrückkäufe --> könnte gut sein'
+        elif (avgAverageSharesGrowth > 0) and (avgAverageSharesGrowth < 1.5):
+            strAverageShares = ' '*6 + 'Anzahl der Aktien steigt um jährlich ca. {v:.1f}%'.format(v=avgAverageSharesGrowth)
+        elif avgAverageSharesGrowth > 2:
+            strAverageShares = ' '*6 + 'ACHTUNG: Die Anzahl der Aktien steigt sehr stark! Jährlich ca. {v:.1f}%'.format(v=avgAverageSharesGrowth)
+        elif np.isnan(avgAverageSharesGrowth):
+            nonNanValues = [asg for asg in averageSharesGrowth if not np.isnan(asg)]
+            avgGrowth = sum(nonNanValues)/len(nonNanValues)
+            strAverageShares = ' '*6 + '+++ Es fehlende Werte +++.\n' + ' '*6 + 'jährlicher Anstieg: ca. {v:.1f}%'.format(v=avgGrowth)
+        else:
+            strAverageShares = '+++Bitte ersetze diesen Text+++'
+
+        strNumberOfShares = '{str:{strFormat}}'.format(str="Number of Shares (Mio.): ",strFormat=stringFormat) + \
+            '\n' + strYear + '\n' + strValue + ' \n' + strAverageShares + '\n'
+
+        """
+            Discounted Cash Flow
+        """
+        if self.stock.assumptions is not None:
+            freeCashFlow = self.stock.financialData.loc['freeCashFlow'].copy()
+            freeCashFlowList = [freeCashFlow[date] for date in list(sorted(freeCashFlow.index.values.copy()))]
+            freeCashFlowGrowth = self.calcGrowth(freeCashFlowList,percentage=True)
+            avgFreeCashFlowGrowth = sum(freeCashFlowGrowth)/len(freeCashFlowGrowth)
+
+            strDiscountedCashFlow = 'Discounted Cash Flow (DCF)\n' + \
+                ' - margin of safety: {v:.1f}%'.format(v=self.stock.assumptions["margin_of_safety"]) + '\n' + \
+                ' - discount rate:    {v:.1f}%'.format(v=self.stock.assumptions["discountRate"]) + '\n' + \
+                ' - expected cash flow growth: \n' + \
+                '   - year 1-5:   {v:.1f}%'.format(v=self.stock.assumptions["growth_year_1_to_5"]) + '\n' + \
+                '   - year 6-10:  {v:.1f}%'.format(v=self.stock.assumptions["growth_year_6_to_10"]) + '\n' + \
+                '   - afterwards: {v:.1f}%'.format(v=self.stock.assumptions["growth_year_10ff"]) + '\n' + \
+                '   (previous average cash flow growth: {v:.1f}%)'.format(v=avgFreeCashFlowGrowth) + '\n' + \
+                '\n' + \
+                '{str:{strFormat}}{val:6.2f}'.format(str="Present Share Value: ",val=self.PresentShareValue,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
+        else:
+            strDiscountedCashFlow = 'Discounted Cash Flow (DCF)\n' + ' +++ Can\'t be calculated due to missing data +++\n' 
+
+        # Combine all fragments to a string
         string2Print = sepString + \
             stockNameOutput + '\n' + \
             sepString + \
-            '{str:{strFormat}}{eps:6.2f}'.format(str='EPS:',eps=self.stock.getBasicDataItem(Stock.EARNINGS_PER_SHARE),strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n' + \
-            strWeightedEps + \
-            '{str:{strFormat}}{priceEarningsRatio:6.2f}'.format(str='P/E:',priceEarningsRatio=self.priceEarningsRatio,strFormat=stringFormat) + '\n' + \
-            strDividend + \
+            strMarketCap + \
             sepString + \
-            'Analysis:\n' + \
-            ' - margin of safety: {marginOfSafety:2.0f}%\n'.format(marginOfSafety=self.marginOfSafety) + \
-            ' - investment horizon: {years:.0f} years\n'.format(years=self.investmentHorizon) + \
-            ' - exp. growth: 1-5y: {grwth:.1f}%, 6-10y: {grwth2:.1f}%, 10ff y: {grwth3:.1f}%\n'.format(grwth=self.stock.assumptions["growth_year_1_to_5"], \
-                grwth2=self.stock.assumptions["growth_year_6_to_10"],grwth3=self.stock.assumptions["growth_year_10ff"]) + '\n' + \
-            strGrahamNumber + \
-            strNetPresentValue + \
-            strNetMargin + \
+            strOperatingIncome + \
+            sepString + \
+            strCashFlowFromOperatingActivities + \
+            sepString + \
             strReturnOnEquity + \
-            strReturnOnAssets + \
+            sepString + \
+            strEarningsGrwoth + \
+            sepString + \
             strFreeCashFlowPerSales + \
+            sepString + \
+            strNumberOfShares + \
+            sepString + \
+            strDiscountedCashFlow + \
             sepString + \
             strCurrentStockValue + \
             sepString
-
+            
         # print to the console
         print(string2Print)
 
-        if (self.LevermannScore is not None):
-            self.LevermannScore.printScore()
 
-        print('\n')
+    def printDetailedAnalysis(self):
+        pass
 
 
 

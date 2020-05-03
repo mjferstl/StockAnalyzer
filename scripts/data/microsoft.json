@@ -23,7 +23,7 @@
     },
     // Termine der Veroeffentlichung von Quartals- und Jahreszahlen
     "dates" : {
-        // Quartylszahlen
+        // Quartalszahlen
         "quarterlyReports": [
             {
                 "quarter": "2019-Q4",

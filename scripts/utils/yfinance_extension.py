@@ -9,12 +9,14 @@ from datetime import datetime
 
 
 # Function to get the annualDilutedEPS from yahoo finance
-def load_EPS(symbol):
+def loadExtraIncomeStatementData(symbol):
 
     url = "https://finance.yahoo.com/quote/" + symbol + "/financials"
 
     dilutedEpsDict = {}
     basicEpsDict = {}
+    averageDilutedSharesDict = {}
+    averageBasicSharesDict = {}
     html = _requests.get(url=url).text
 
     json_str = html.split('root.App.main =')[1].split(
@@ -32,6 +34,17 @@ def load_EPS(symbol):
             if eps is not None:
                 basicEpsDict[eps['asOfDate']] = eps['reportedValue']['raw']
 
+        annualDilutedAverageSharesList = _json.loads(json_str)['context']['dispatcher']['stores']['QuoteTimeSeriesStore']['timeSeries']['annualDilutedAverageShares']
+        for avgShares in annualDilutedAverageSharesList:
+            if avgShares is not None:
+                averageDilutedSharesDict[avgShares['asOfDate']] = avgShares['reportedValue']['raw']
+
+        annualBasicAverageSharesList = _json.loads(json_str)['context']['dispatcher']['stores']['QuoteTimeSeriesStore']['timeSeries']['annualBasicAverageShares']
+        for avgShares in annualBasicAverageSharesList:
+            if avgShares is not None:
+                averageBasicSharesDict[avgShares['asOfDate']] = avgShares['reportedValue']['raw']
+
+
     # sort dicts in descending order, from newest to oldest
     dilutedEpsDictSorted = sortDictDescending(dilutedEpsDict)
     basicEpsDictSorted = sortDictDescending(basicEpsDict)
@@ -47,6 +60,14 @@ def load_EPS(symbol):
     for k,v in basicEpsDictSorted.items():
         df.loc['basicEPS',k] = v
 
+    # add diluted average shares
+    for k,v in averageDilutedSharesDict.items():
+        df.loc['dilutedAverageShares',k] = v
+
+    # add basic average shares
+    for k,v in averageBasicSharesDict.items():
+        df.loc['basicAverageShares',k] = v
+    
     return df
 
 def load_CashFlow(symbol):
