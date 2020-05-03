@@ -1,8 +1,13 @@
+beautifulsoup4==4.9.0
+bs4==0.0.1
 certifi==2019.11.28
 chardet==3.0.4
+commentjson==0.8.3
 cycler==0.10.0
 idna==2.9
+joblib==0.14.1
 kiwisolver==1.2.0
+lark-parser==0.7.8
 lxml==4.5.0
 matplotlib==3.2.1
 multitasking==0.0.9
@@ -13,7 +18,10 @@ pyparsing==2.4.7
 python-dateutil==2.8.1
 pytz==2019.3
 requests==2.23.0
+scikit-learn==0.22.2.post1
+scipy==1.4.1
 six==1.14.0
+sklearn==0.0
+soupsieve==2.0
 urllib3==1.25.8
 yfinance==0.1.54
-sklearn==0.0

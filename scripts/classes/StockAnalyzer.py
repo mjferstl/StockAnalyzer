@@ -6,6 +6,8 @@ import pandas as pd
 
 import datetime
 from dateutil.relativedelta import relativedelta
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
 
 # custom modules
 from classes.Stock import Stock, StockIndex
@@ -16,9 +18,6 @@ from utils.generic import npDateTime64_2_str
 class StockAnalyzer():
 
     # value shared across all class instances
-    #
-    # margin of safety: 20% --> 0.20
-    marginOfSafety = 0.2
     # investment time: 10 years
     investmentHorizon = 10
 
@@ -45,6 +44,8 @@ class StockAnalyzer():
         
         self.stock = stock
 
+        self.marginOfSafety = self.stock.assumptions["margin_of_safety"]
+
         # variables for anayzing the stock
         # EPS
         self.meanWeightedEps = None
@@ -55,16 +56,17 @@ class StockAnalyzer():
         self.priceEarningsRatio = None
         self.getPriceEarningsRatio()
 
-        self.GrahamNumber = None
-        self.fairValue = None
+        self._GrahamNumber = None
         self.recommendations = None
         self.LevermannScore = None
 
         #
-        self.netMargin = pd.Series()
-        self.returnOnEquity = pd.Series()
-        self.returnOnAssets = pd.Series()
-        self.freeCashFlowBySales = pd.Series()
+        self._NetMargin = None
+        self._ReturnOnEquity = None
+        self._ReturnOnAssets = None
+        self._FreeCashFlowBySales = None
+        self._PriceToSales = None
+        self._PriceToEarnings = None
 
         self.dividendYield = 0
 
@@ -73,22 +75,51 @@ class StockAnalyzer():
 
     
     def analyzeStock(self):
-        self.getFairValue()
         self.calcGrahamNumber()
-        self.calcNPV()
+        self.calcDCF()
         self.calcLevermannScore()
         self.recommendations = self.getRecommendations()
-        self.getNetMargin()
-        self.getReturnOnEquity()
-        self.getReturnOnAssets()
-        self.getFreeCashFlowBySales()
+        self.NetMargin
+        self.calcReturnOnEquity()
+        self.calcReturnOnAssets()
+        self.calcFreeCashFlowBySales()
+        self.PriceToSales
 
-
-    def getGrahamNumber(self):
-        if self.GrahamNumber is None:
+    @property
+    def GrahamNumber(self):
+        if self._GrahamNumber is None:
             self.calcGrahamNumber()
+        return self._GrahamNumber
 
-        return self.GrahamNumber
+    @property
+    def ReturnOnEquity(self):
+        if self._ReturnOnEquity is None:
+            self.calcReturnOnEquity()
+        return self._ReturnOnEquity
+
+    @property
+    def ReturnOnAssets(self):
+        if self._ReturnOnAssets is None:
+            self.calcReturnOnAssets()
+        return self._ReturnOnAssets
+
+    @property
+    def FreeCashFlowBySales(self):
+        if self._FreeCashFlowBySales is None:
+            self.calcFreeCashFlowBySales()
+        return self._FreeCashFlowBySales
+
+    @property
+    def PriceToSales(self):
+        if self._PriceToSales is None:
+            self.calcPriceToSales()
+        return self._PriceToSales
+
+    @property
+    def NetMargin(self):
+        if self._NetMargin is None:
+            self.calcNetMargin()
+        return self._NetMargin
 
 
     def calcGrahamNumber(self):
@@ -100,12 +131,12 @@ class StockAnalyzer():
             if (self.stock.getBasicDataItem(Stock.BOOK_VALUE_PER_SHARE) < 0):
                 print(' +++ book value per share < 0! Stock: ' + self.stock.symbol + ' (' + self.stock.name + ') +++')
                 
-            self.GrahamNumber = np.sqrt(15 * self.meanWeightedEps * 1.5 * self.stock.getBasicDataItem(Stock.BOOK_VALUE_PER_SHARE))
+            self._GrahamNumber = np.sqrt(15 * self.meanWeightedEps * 1.5 * self.stock.getBasicDataItem(Stock.BOOK_VALUE_PER_SHARE))
         else:
-            self.GrahamNumber = 0
+            self._GrahamNumber = 0
 
 
-    def calcNPV(self):
+    def calcDCF(self):
         # Free Chashflow der letzten Jahre
         CF = self.stock.financialData.loc['freeCashFlow',:].copy()
 
@@ -116,37 +147,47 @@ class StockAnalyzer():
         for date in sorted(CF.index.values.copy()):
             CF_sorted.append(CF.loc[date])
 
-        # mittleres Wachstum des Cashflows der letzten Jahre
-        growthAbs, growthPrc = [], []
-        for y in range(1,len(CF_sorted)):
-            # absolutes Wachstum des Cashflows
-            growthAbs.append(CF_sorted[y]-CF_sorted[y-1])
-            # relatives Wachstum des Cashflows in Prozent
-            growthPrc.append(growthAbs[-1]/CF_sorted[y-1]*100)
+        # Berechnung 
+        model = linearRegression(range(len(CF_sorted)),CF_sorted,plotResult=False)
+        FCFstartValue = model.predict(np.array([len(CF_sorted)-1]).reshape(1, -1))[0]
         
-        # mittleres Wachstum
-        meanGrowthPrc = sum(growthPrc)/len(growthPrc)
-        print('* mittleres FCF-Wachstum der letzten {years:.0f} Jahre: {cfGrowth:.2f}%'.format(years=len(CF_sorted),cfGrowth=meanGrowthPrc))
-
+        # Wachstumsrate der naechsten 10 Jahre
         discountRate = self.stock.assumptions["discountRate"]/100
-        presentValue = [] # present value
-        # Scheife ueber alle zu betrachtenden Jahre
-        for year in range(1,self.investmentHorizon+1):
-            # Geldwert des zukuenftigen Cashflow fuer ein bestimmtes Jahr in der Zukunft
-            CF_t = CF_sorted[-1]*pow(1+meanGrowthPrc/100,year)
-            #print('Jahr: ' + str(year) + ', Cashflow: ' + str(CF_t))
 
-            # "present value" des cashflows in der Zukunft
-            PV_t = CF_t / pow(1+discountRate,year)
+        # Free Cash Flow der naechsten 5 Jahre
+        growthRate = self.stock.assumptions['growth_year_1_to_5']/100
+        discountedCashFlow = []
+        FCF = []
+        for i in range(1,6):
+            FCF.append((FCFstartValue*(1+growthRate)**i))
+            discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**i))
 
-            # Aufsummierung des "present values" fuer den Betrachtungszeitraum
-            presentValue.append(PV_t)
+        # Free Cash Flow der Jahre 6-10
+        growthRate = self.stock.assumptions['growth_year_6_to_10']/100
+        for i in range(6,11):
+            FCF.append((FCFstartValue*(1+growthRate)**i))
+            discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**i))
+
+        # Free Cash Flow insgesamt ab dem 11. Jahr (perpetuity value) im heutigen Wert (discounted perpetuity value)
+        # - FCF_10: Free Cash Flow in 10 Jahren
+        # - growthRate_10: Wachstum des Free Cash Flows nach dem 10. Jahr
+        # Formel: FCF_10 * (1 + growthRate_10) / ((discountRate - growthRate_10) * (1 + discountRate))
+        growthRate = self.stock.assumptions['growth_year_10ff']/100
+        # perpetuity value
+        FCF.append((FCF[-1] * (1 + growthRate)) / (discountRate - growthRate))
+        # discounted perpetuity value
+        discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**10))
 
         # Summe der, auf den aktuellen Zeitpunkt bezogenen, zukuenfitgen Cashflows
-        presentValue = sum(presentValue)
-        #print(PV)
+        totalEquityValue = sum(discountedCashFlow)
 
-        self.NPV = (presentValue - self.stock.keyStatistics[Stock.MARKET_CAP])/self.stock.keyStatistics[Stock.SHARES_OUTSTANDING]
+        # Wert einer Aktie zum aktuellen Zeitpunkt auf Grundlage aller zkünftigen Free Cash Flows
+        # Beruecksichtigung einer Margin of safety
+        marginOfSafety = self.marginOfSafety/100
+        sharesOutstanding = self.stock.keyStatistics[Stock.SHARES_OUTSTANDING]
+        perShareValue = totalEquityValue/sharesOutstanding/(1 + marginOfSafety)
+
+        self.presentShareValue = perShareValue
 
 
     # Berechnung des Levermann scores
@@ -191,21 +232,6 @@ class StockAnalyzer():
         # Bewertung: 0-2 von 3 -> halten
         pass
 
-
-    # Funktion zur Berechnung des sog. "inneren Wertes" der Aktie
-    def getFairValue(self):
-        if self.fairValue is None:
-
-            if self.stock.assumptions["growth_year_1_to_5"] is None:
-                raise ValueError('The expected annualy growth rate for ' + self.stock.symbol + ' (' + self.stock.name + ') is of type None')
-            if not self.stock.isItemInBasicData(Stock.PE_RATIO):
-                raise KeyError('The P/E for ' + self.stock.name + ' is not existant')
-            
-            # calclate the new growth rate, as the dividend yield gets added
-            growthRateAnnualy = self.stock.assumptions["growth_year_1_to_5"]/100
-            self.fairValue = calcFairValue(self.meanWeightedEps,growthRateAnnualy,self.stock.getBasicDataItem(Stock.PE_RATIO),self.stock.assumptions["discountRate"],StockAnalyzer.marginOfSafety,StockAnalyzer.investmentHorizon)
-
-        return self.fairValue
 
     def getMeanWeightedEPS(self):
         if (self.meanWeightedEps is None) or (self.epsWeightYears is None):
@@ -262,9 +288,13 @@ class StockAnalyzer():
         return latest
 
 
-    def getNetMargin(self):
-        if self.stock.financialData is not None:
+    def calcNetMargin(self):
+        if self.stock.financialData is None:
+            raise Exception('The stock has no historical financial data. "Total Revenue" and "Net Income" needed!')
+        else:
+            # Nettogewinn
             netIncome = self.stock.financialData.loc['Net Income',:].copy()
+            # Umsatz
             revenues = self.stock.financialData.loc['Total Revenue',:].copy()
 
             dic = {}
@@ -273,14 +303,15 @@ class StockAnalyzer():
 
             df = pd.Series(dic, index=dic.keys())
             df.reindex(sorted(df.index, reverse=True))
-
-            self.netMargin = df
+            self._NetMargin = df
 
             return df
 
 
-    def getReturnOnEquity(self):
-        if self.stock.financialData is not None:
+    def calcReturnOnEquity(self):
+        if self.stock.financialData is None:
+            raise Exception('The stock has no historical financial data. "Total Stockholder Equity" and "Net Income" needed!')
+        else:
             # Eigenkapital
             equity = self.stock.financialData.loc['Total Stockholder Equity',:].copy()
             # Betriebseinkommen
@@ -292,12 +323,14 @@ class StockAnalyzer():
                 dic[index] = income[index]/equity[index]
 
             df = pd.Series(dic, index=dic.keys())
-            self.returnOnEquity = df
+            self._ReturnOnEquity = df
 
             return df
 
-    def getReturnOnAssets(self):
-        if self.stock.financialData is not None:
+    def calcReturnOnAssets(self):
+        if self.stock.financialData is None:
+            raise Exception('The stock has no historical financial data. "Total Assets" and "Net Income" needed!')
+        else:
             # Gesamtvermögen
             totalAssets = self.stock.financialData.loc['Total Assets',:].copy()
             # Betriebseinkommen
@@ -309,13 +342,16 @@ class StockAnalyzer():
                 dic[index] = income[index]/totalAssets[index]
 
             df = pd.Series(dic, index=dic.keys())
-            self.returnOnAssets = df
+            self._ReturnOnAssets = df
 
             return df
 
-    def getFreeCashFlowBySales(self):
-        if self.stock.financialData is not None:
-            # Einnahmen
+
+    def calcFreeCashFlowBySales(self):
+        if self.stock.financialData is None:
+            raise Exception('The stock has no historical financial data. "Total Revenue" and "freeCashFlow" needed!')
+        else:
+            # Umsatz
             revenues = self.stock.financialData.loc['Total Revenue',:].copy()
             # Free Cash Flow
             freeCashFlow = self.stock.financialData.loc['freeCashFlow',:].copy()
@@ -326,10 +362,29 @@ class StockAnalyzer():
                 dic[index] = freeCashFlow[index]/revenues[index]
 
             df = pd.Series(dic, index=dic.keys())
-            self.freeCashFlowBySales = df
+            self._FreeCashFlowBySales = df
 
             return df
 
+
+    def calcPriceToSales(self):
+        if self.stock.financialData is None:
+            raise Exception('The stock has no historical financial data. "Total Revenue" and "Total Stockholder Equity" needed!')
+        else:
+            # Umsatz
+            revenues = self.stock.financialData.loc['Total Revenue',:].copy()
+            # Marktkapitalisierung
+            totalStockHolderEquity = self.stock.financialData.loc['Total Stockholder Equity',:].copy() 
+
+            # Price to Sales fuer jedes Jahr
+            P_S = pd.Series()
+            for date in list(revenues.index.values.copy()):
+                # Price/Sales
+                price = totalStockHolderEquity.loc[date]
+                sales = revenues.loc[date]
+                P_S.loc[date] = price/sales
+
+            self._PriceToSales
 
 
     def printAnalysis(self):
@@ -341,10 +396,6 @@ class StockAnalyzer():
         stringFormat = "35s"
         dispLineLength = 50
         sepString = '-'*dispLineLength + '\n'
-
-        #
-        if self.fairValue is None:
-            self.getFairValue()
 
         # string to print the dividend and the dividend yield
         strDividend = ''
@@ -362,98 +413,82 @@ class StockAnalyzer():
             strWeightedEps = '{str:{strFormat}}{epsw:6.2f}'.format(str=strEntry,epsw=self.meanWeightedEps,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
 
         # string to print the graham number
-        strGrahamNumber = ''
-        if self.GrahamNumber is not None:
-            strGrahamNumber = '{str:{strFormat}}{gn:6.2f}'.format(str='Graham number:',gn=self.GrahamNumber,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
+        strGrahamNumber = '{str:{strFormat}}{gn:6.2f}'.format(str='Graham number:',gn=self.GrahamNumber,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
 
         strNetPresentValue = ''
-        if self.NPV is not None:
-            if self.NPV > 0:
+        if self.presentShareValue is not None:
+            if self.presentShareValue > self.stock.getBasicDataItem(Stock.MARKET_PRICE):
                 strNPVcomment = 'time to invest!'
             else:
                 strNPVcomment = 'too expensive...'
-            strNetPresentValue = '{str:{strFormat}}{gn:6.2f}'.format(str='NetPresentValue:',gn=self.NPV,strFormat=stringFormat) + \
+            strNetPresentValue = '{str:{strFormat}}{gn:6.2f}'.format(str='Present share value (DCF):',gn=self.presentShareValue,strFormat=stringFormat) + \
                 ' ' + self.stock.currencySymbol + ' (' + strNPVcomment + ')\n'
 
         # string to print the stock's current value
         strCurrentStockValue = ''
         stockPrice = self.stock.getBasicDataItem(Stock.MARKET_PRICE)
         if (stockPrice is not None):
-            strCurrentStockValue = '{str:{strFormat}}{val:6.2f}'.format(str="Current price:",val=stockPrice,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
+            strCurrentStockValue = '{str:{strFormat}}{val:6.2f}'.format(str="Current share price:",val=stockPrice,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
 
         # Free Cash flow bezogen auf die Einnahmen
-        strFreeCashFlowPerSales = ''
-        if self.freeCashFlowBySales is not None:
-            strFcfpsComment = ''
-            limit = 5/100.0
-            isGood = sum([1 if fcfps > limit else 0 for fcfps in self.freeCashFlowBySales]) == len(self.freeCashFlowBySales)
-            avgFcfps = sum(self.freeCashFlowBySales)/len(self.freeCashFlowBySales)
-            if isGood: # groesser als 5%
-                strFcfpsComment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
-            elif avgFcfps > limit:
-                 strFcfpsComment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
-            else:
-                strFcfpsComment = '?'
-
-            
-            strFreeCashFlowPerSales = '{str:{strFormat}}{val:6.2f}'.format(str="free cash flow/sales (" + str(len(self.netMargin)) + "y avg.):",val=avgFcfps*100,strFormat=stringFormat) + \
-                '% (' + strFcfpsComment + ')\n'    
+        limit = 5/100.0
+        isGood = sum([1 if fcfps > limit else 0 for fcfps in self.FreeCashFlowBySales]) == len(self.FreeCashFlowBySales)
+        avgFcfps = sum(self.FreeCashFlowBySales)/len(self.FreeCashFlowBySales)
+        if isGood: # groesser als 5%
+            strFcfpsComment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
+        elif avgFcfps > limit:
+                strFcfpsComment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
+        else:
+            strFcfpsComment = '?'
+        # String fuer die Ausgabe
+        strFreeCashFlowPerSales = '{str:{strFormat}}{val:6.2f}'.format(str="Free Cash Flow/Sales (" + str(len(self.FreeCashFlowBySales)) + "y avg.):",val=avgFcfps*100,strFormat=stringFormat) + \
+            '% (' + strFcfpsComment + ')\n'    
 
         # Nettogewinn
-        strNetMargin = ''
-        if self.netMargin is not None:
-            strNetMarginComment = ''
-            limit = 15/100.0
-            limit2 = 5/100.0
-            isGood = sum([1 if nm > limit else 0 for nm in self.netMargin]) == len(self.netMargin)
-            isBad = sum([1 if nm < limit2 else 0 for nm in self.netMargin]) == len(self.netMargin)
-            avgNetMargin = sum(self.netMargin)/len(self.netMargin)
-            if isGood: # groesser als 15%
-                strNetMarginComment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
-            elif avgNetMargin > limit:
-                strNetMarginComment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
-            elif isBad: # kleiner als 5%
-                strNetMarginComment = 'Caution!, avg < {limit:.0f}%'.format(limit=limit2*100)
-            else:
-                strNetMarginComment = '-'
+        limit = 15/100.0
+        limit2 = 5/100.0
+        isGood = sum([1 if nm > limit else 0 for nm in self.NetMargin]) == len(self.NetMargin)
+        isBad = sum([1 if nm < limit2 else 0 for nm in self.NetMargin]) == len(self.NetMargin)
+        avgNetMargin = sum(self.NetMargin)/len(self.NetMargin)
+        if isGood: # groesser als 15%
+            strNetMarginComment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
+        elif avgNetMargin > limit:
+            strNetMarginComment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
+        elif isBad: # kleiner als 5%
+            strNetMarginComment = 'Caution!, avg < {limit:.0f}%'.format(limit=limit2*100)
+        else:
+            strNetMarginComment = '-'
 
-            strNetMargin = '{str:{strFormat}}{val:6.2f}'.format(str="Net margin (" + str(len(self.netMargin)) + "y avg.):",val=avgNetMargin*100,strFormat=stringFormat) + \
-                '% (' + strNetMarginComment + ')\n'
+        strNetMargin = '{str:{strFormat}}{val:6.2f}'.format(str="Net margin (" + str(len(self.NetMargin)) + "y avg.):",val=avgNetMargin*100,strFormat=stringFormat) + \
+            '% (' + strNetMarginComment + ')\n'
 
         # Eigenkapitalrenidte
-        strRoE = ''
-        if self.returnOnEquity is not None:
-            strRoEcomment = ''
-            limit = 15/100.0
-            isGood = sum([1 if roe > limit else 0 for roe in self.returnOnEquity]) == len(self.returnOnEquity)
-            avgRoE = sum(self.returnOnEquity)/len(self.returnOnEquity)
-            if isGood: 
-                strRoEcomment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
-            elif avgRoE > limit:
-                strRoEcomment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
-            else:
-                strRoEcomment = '?'
-
-            strReturnOnEquity = '{str:{strFormat}}{val:6.2f}'.format(str="Return on equity (" + str(len(self.returnOnEquity)) + "y avg.):",val=avgRoE*100,strFormat=stringFormat) + \
-                '% (' + strRoEcomment + ')\n'
+        limit = 15/100.0
+        isGood = sum([1 if roe > limit else 0 for roe in self.ReturnOnEquity]) == len(self.ReturnOnEquity)
+        avgRoE = sum(self.ReturnOnEquity)/len(self.ReturnOnEquity)
+        if isGood: 
+            strRoEcomment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
+        elif avgRoE > limit:
+            strRoEcomment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
+        else:
+            strRoEcomment = '?'
+        # String fuer die Ausgabe
+        strReturnOnEquity = '{str:{strFormat}}{val:6.2f}'.format(str="Return on equity (" + str(len(self.ReturnOnEquity)) + "y avg.):",val=avgRoE*100,strFormat=stringFormat) + \
+            '% (' + strRoEcomment + ')\n'
 
         # Kapitalrendite
-        strRoA = ''
-        if self.returnOnAssets is not None:
-            strRoAcomment = ''
-            limit = 6/100.0
-            isGood = sum([1 if roa >= limit else 0 for roa in self.returnOnAssets]) == len(self.returnOnAssets)
-            avgRoA = sum(self.returnOnAssets)/len(self.returnOnAssets)
-            if isGood:
-                strRoAcomment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
-            elif avgRoA >= limit:
-                strRoAcomment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
-            else:
-                strRoAcomment = '?'
-
-            
-            strReturnOnAssets = '{str:{strFormat}}{val:6.2f}'.format(str="Return on assets (" + str(len(self.returnOnAssets)) + "y avg.):",val=avgRoA*100,strFormat=stringFormat) + \
-                '% (' + strRoAcomment + ')\n'
+        limit = 6/100.0
+        isGood = sum([1 if roa >= limit else 0 for roa in self._ReturnOnAssets]) == len(self.ReturnOnAssets)
+        avgRoA = sum(self.ReturnOnAssets)/len(self.ReturnOnAssets)
+        if isGood:
+            strRoAcomment = 'good, always >= {limit:.0f}%'.format(limit=limit*100)
+        elif avgRoA >= limit:
+            strRoAcomment = 'ok, avg >= {limit:.0f}%'.format(limit=limit*100)
+        else:
+            strRoAcomment = '?'
+        # String fuer die Ausgabe
+        strReturnOnAssets = '{str:{strFormat}}{val:6.2f}'.format(str="Return on assets (" + str(len(self.ReturnOnAssets)) + "y avg.):",val=avgRoA*100,strFormat=stringFormat) + \
+            '% (' + strRoAcomment + ')\n'
 
 
         # format margin around stock name
@@ -471,11 +506,10 @@ class StockAnalyzer():
             strDividend + \
             sepString + \
             'Analysis:\n' + \
-            ' - margin of safety: {marginOfSafety:2.0f}%\n'.format(marginOfSafety=StockAnalyzer.marginOfSafety*100) + \
+            ' - margin of safety: {marginOfSafety:2.0f}%\n'.format(marginOfSafety=self.marginOfSafety) + \
             ' - investment horizon: {years:.0f} years\n'.format(years=self.investmentHorizon) + \
-            ' - exp. annual growth: {grwth:.1f} %\n'.format(grwth=self.stock.assumptions["growth_year_1_to_5"]) + \
-            '\n' + \
-            '{str:{strFormat}}{val:6.2f}'.format(str="Fair value:",val=self.fairValue,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n' + \
+            ' - exp. growth: 1-5y: {grwth:.1f}%, 6-10y: {grwth2:.1f}%, 10ff y: {grwth3:.1f}%\n'.format(grwth=self.stock.assumptions["growth_year_1_to_5"], \
+                grwth2=self.stock.assumptions["growth_year_6_to_10"],grwth3=self.stock.assumptions["growth_year_10ff"]) + '\n' + \
             strGrahamNumber + \
             strNetPresentValue + \
             strNetMargin + \
@@ -494,41 +528,6 @@ class StockAnalyzer():
 
         print('\n')
 
-
-# ---------- FUNCTIONS ----------
-#
-def calcFairValue(earningsPerShare,growthRateAnnualy,priceEarningsRatio,expectedReturn,marginOfSafety,investmentHorizon=10):
-    """
-        Berechnung des "Inneren Wertes" (oft auch als "Fairer Wert" bezeichnet)
-        Berechnungsgrundpagen:
-        - angegebene growthRateAnnualy gilt fuer die naechsten Jahre
-    """
-
-    DEBUG = False
-
-    if DEBUG:
-        print('Argumente fuer die Funktion calcFairValue()')
-        print('earningsPerShare:   ' + str(earningsPerShare))
-        print('growthRateAnnualy:  ' + str(growthRateAnnualy))
-        print('priceEarningsRatio: ' + str(priceEarningsRatio))
-        print('expectedReturn:     ' + str(expectedReturn))
-        print('marginOfSafety:     ' + str(marginOfSafety))
-        print('investmentHorizon:  ' + str(investmentHorizon))
-
-    # Berechnung des Gewinns pro Aktie in der Zukunft
-    futureEarningsPerShare = earningsPerShare*((1+growthRateAnnualy)**StockAnalyzer.investmentHorizon)
-
-    # Berechnung des zukuenfiten Aktienpreises auf Grundlage des aktuellen Kurs-Gewinn-Verhaeltnisses
-    futureStockValue = futureEarningsPerShare*priceEarningsRatio
-
-    # Berechnung des fairen/inneren Preises zum aktuellen Zeitpunkt auf Grundlage der Renditeerwartung
-    fairValue = futureStockValue/((1+(expectedReturn/100))**investmentHorizon)
-    
-    # Berechnung des fairen Wertes mit einer Sicherheit (Margin of Safety)
-    fairValueSafe = fairValue*(1-marginOfSafety)
-
-    # return the 
-    return fairValueSafe
 
 
 class LevermannScore():
@@ -563,7 +562,7 @@ class LevermannScore():
 
         # Werte fuer die Berechnung des Levermann-Scores
         # Return on Equity (RoE), Eigenkapitalrenite letztes Jahr
-        self.returnOnEquity = None 
+        self._ReturnOnEquity = None 
         # EBIT-Marge letztes Jahr
         self.EbitMarge = None
         # Eigenkapitalquote letztes Jahr
@@ -616,7 +615,7 @@ class LevermannScore():
         annualyRoE = [gewinn/ek*100 for gewinn,ek in zip(Gewinn,equity)]
         # Eigenkapitalrendite: Mittelwert ueber die Jahre
         RoE = sum(annualyRoE)/len(annualyRoE)
-        self.returnOnEquity = RoE
+        self._ReturnOnEquity = RoE
 
         # RoE > 20% -> +1, 10% < RoE < 20% -> 0, RoE < 10% -> -1
         if (RoE > 20):
@@ -952,8 +951,8 @@ class LevermannScore():
         print('    Levermann Score     ')
         print('-'*sepLineLength)
         
-        if (self.returnOnEquity is not None):
-            print('1. Eigenkapitalrendite LJ: {roe:.2f}%'.format(roe=self.returnOnEquity))
+        if (self._ReturnOnEquity is not None):
+            print('1. Eigenkapitalrendite LJ: {roe:.2f}%'.format(roe=self._ReturnOnEquity))
         else:
             print('1. Eigenkapitalrendite LJ: MISSING')
 
@@ -1020,7 +1019,7 @@ class LevermannScore():
 
 
 
-def findNearestDate(datetime_object,datesList,dateFormat=Stock.DATE_FORMAT):
+def findNearestDate(date,datesList,dateFormat=Stock.DATE_FORMAT):
     """
         Gibt das Datum als String zurueck, das die geringste Differenz zum Datum
         im Argument datetime_object hat
@@ -1029,12 +1028,14 @@ def findNearestDate(datetime_object,datesList,dateFormat=Stock.DATE_FORMAT):
     """
 
     # Finden eines passenden Datums
-    if isinstance(datetime_object,str):
-        date_str = datetime_object
-    elif isinstance(datetime_object,datetime.datetime):
-        date_str = datetime_object.strftime(dateFormat)
+    if isinstance(date,str):
+        date_str = date
+        datetime_object = datetime.datetime.strptime(date,dateFormat)
+    elif isinstance(date,datetime.datetime):
+        datetime_object = date
+        date_str = date.strftime(dateFormat)
     else:
-        raise ValueError('Argument of type ' + type(datetime_object) + ' is not supported')
+        raise ValueError('Argument of type ' + type(date) + ' is not supported.')
 
     if date_str in datesList:
         return date_str
@@ -1053,3 +1054,36 @@ def findNearestDate(datetime_object,datesList,dateFormat=Stock.DATE_FORMAT):
 
     # Wenn nichts gefunden wurde, dann wird ein leerer String zurueckgegeben
     return ''
+
+
+def linearRegression(x,y,plotResult=False):
+
+    if not isinstance(x,np.ndarray):
+        x_data = np.array(x).reshape((-1, 1))
+    else:
+        x_data = x
+
+    if not isinstance(y,np.ndarray):
+        y_data = np.array(y)
+    else:
+        y_data = y
+
+    # Fit the model
+    model = LinearRegression(fit_intercept=True,copy_X=True).fit(x_data, y_data)
+
+    if plotResult:
+        r_sq = model.score(x_data, y_data)
+        print('coefficient of determination:', r_sq)
+
+        print('intercept:', model.intercept_)
+        print('slope:', model.coef_)
+
+        # create a plot
+        fig, ax = plt.subplots()
+        ax.plot(x_data,y_data, linestyle = 'None', marker='o', label='Data')
+        ax.plot(x_data,model.predict(x_data), label='Linear Regression')
+        ax.legend(loc='upper left')
+        fig.tight_layout()
+        plt.show()
+
+    return model

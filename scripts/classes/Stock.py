@@ -8,7 +8,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from pandas import DataFrame
 import pandas as pd
-import json
+import commentjson as json
 
 # 3rd party modules
 import yfinance as yf
@@ -240,10 +240,6 @@ class Stock:
 
         if ('trailingEps' in self.info.keys()):
             self.basicData[self.EARNINGS_PER_SHARE] = self.info['trailingEps']
-
-        # use the forward value if it is not None
-        if ('forwardEps' in self.info.keys()) and (self.info['forwardEps'] is not None):
-            self.basicData[self.EARNINGS_PER_SHARE] = self.info['forwardEps']
             
         if self.EARNINGS_PER_SHARE not in self.basicData.keys():
             raise KeyError('Missing key "trailingEps" or "forwardEps" in stock information')
@@ -257,10 +253,6 @@ class Stock:
 
         if 'trailingPE' in self.info.keys():
             self.basicData[self.PE_RATIO] = self.info['trailingPE']
-
-        # use the forward value, if it is not None
-        if ('forwardPE' in self.info.keys()) and (self.info['forwardPE'] is not None):
-            self.basicData[self.PE_RATIO] = self.info['forwardPE']
 
         if self.PE_RATIO not in self.basicData.keys():
             raise KeyError('Missing key "trailingPE" or "forwardPE" in stock information')
