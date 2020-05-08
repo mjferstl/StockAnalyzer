@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from classes.Stock import Stock, StockIndex
 from classes.FinnhubAPI import FinnhubClient
 from utils.generic import npDateTime64_2_str
+from utils.plot import createPlot
 
 # ---------- CLASSES ----------
 class StockAnalyzer():
@@ -152,7 +153,7 @@ class StockAnalyzer():
     """
         Discounted Cash Flow Verfahren
     """
-    def calcDCF(self):
+    def calcDCF(self,detailed=True,generatePlot=False):
         if self.stock.assumptions is not None:
             # Free Chashflow der letzten Jahre
             CF = self.stock.financialData.loc['freeCashFlow',:].copy()
@@ -161,12 +162,21 @@ class StockAnalyzer():
 
             # Sortierung in aufsteigender Reihenfolge (alt -> neu)
             CF_sorted = []
+            years = []
             for date in sorted(CF.index.values.copy()):
                 CF_sorted.append(CF.loc[date])
+                years.append(int(date[0:4]))
 
             # Berechnung 
             model = linearRegression(range(len(CF_sorted)),CF_sorted,plotResult=False)
-            FCFstartValue = model.predict(np.array([len(CF_sorted)-1]).reshape(1, -1))[0]
+            todaysCashFlow_regression = model.predict(np.array([len(CF_sorted)-1]).reshape(1, -1))[0]
+            todaysCashFlow_thisYear = CF_sorted[-1]
+            FCFstartValue = (todaysCashFlow_regression+todaysCashFlow_thisYear)/2
+            if detailed:
+                print('DCF start value is the mean value of last years value and the regression value: {v:.2f} Mrd. {c}'.format(v=FCFstartValue/10**9,c=self.stock.currencySymbol))
+                print('-'*54)
+                print('  year | Free Cash Flow | discounted free cash flow')
+                print(' ' + '-'*52 + ' ')
             
             # Wachstumsrate der naechsten 10 Jahre
             discountRate = self.stock.assumptions["discountRate"]/100
@@ -174,16 +184,22 @@ class StockAnalyzer():
             # Free Cash Flow der naechsten 5 Jahre
             growthRate = self.stock.assumptions['growth_year_1_to_5']/100
             discountedCashFlow = []
-            FCF = []
+            FCF, year = [], []
             for i in range(1,6):
                 FCF.append((FCFstartValue*(1+growthRate)**i))
                 discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**i))
+                year.append(years[-1]+i)
+                if detailed:
+                    print('    {y:2.0f} | {fcf:6.2f} Mrd.    | {dfcf:6.2f} Mrd.'.format(y=i,fcf=FCF[-1]/10**9,dfcf=discountedCashFlow[-1]/10**9))
 
             # Free Cash Flow der Jahre 6-10
             growthRate = self.stock.assumptions['growth_year_6_to_10']/100
             for i in range(6,11):
-                FCF.append((FCFstartValue*(1+growthRate)**i))
+                FCF.append((FCF[4]*(1+growthRate)**(i-5)))
                 discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**i))
+                year.append(years[-1]+i)
+                if detailed:
+                    print('    {y:2.0f} | {fcf:6.2f} Mrd.    | {dfcf:6.2f} Mrd.'.format(y=i,fcf=FCF[-1]/10**9,dfcf=discountedCashFlow[-1]/10**9))
 
             # Free Cash Flow insgesamt ab dem 11. Jahr (perpetuity value) im heutigen Wert (discounted perpetuity value)
             # - FCF_10: Free Cash Flow in 10 Jahren
@@ -195,6 +211,10 @@ class StockAnalyzer():
             # discounted perpetuity value
             discountedCashFlow.append(FCF[-1] / ((1 + discountRate)**10))
 
+            if detailed:
+                print('   inf | {fcf:6.2f} Mrd.    | {dfcf:6.2f} Mrd.'.format(y=i,fcf=FCF[-1]/10**9,dfcf=discountedCashFlow[-1]/10**9))
+                print(' ' + '-'*52 + ' ')
+
             # Summe der, auf den aktuellen Zeitpunkt bezogenen, zukuenfitgen Cashflows
             totalEquityValue = sum(discountedCashFlow)
 
@@ -204,7 +224,17 @@ class StockAnalyzer():
             sharesOutstanding = self.stock.keyStatistics[Stock.SHARES_OUTSTANDING]
             perShareValue = totalEquityValue/sharesOutstanding/(1 + marginOfSafety)
 
+            if detailed:
+                print('                          {v:7.2f} Mrd.'.format(v=totalEquityValue/10**9))
+                print(' shares outstanding:      {v:7.0f} Mio.'.format(v=sharesOutstanding/10**6))
+                print(' ' + '-'*52 + ' ')
+                print(' present value per share: {v:7.2f}'.format(v=perShareValue))
+                print('-'*54 + '\n')
+
             self._PresentShareValue = perShareValue
+
+            if generatePlot:
+                createPlot([years,years[-1],year],[CF_sorted,FCFstartValue,FCF[:-1]],legend_list=['historical free cash flows','start value for DCF method','estimated free cash flows'])
         else:
             print(' +++ Discounted Cash Flow Analysis failed du to missing data +++ ')
 
@@ -420,10 +450,11 @@ class StockAnalyzer():
         sepString = '-'*dispLineLength + '\n'
 
         # format margin around stock name
-        stockNameOutput = self.stock.name
-        if (len(self.stock.name) < dispLineLength):
-            margin = int((dispLineLength-len(self.stock.name))/2)
-            stockNameOutput = ' '*margin + self.stock.name + ' '*margin
+        stockName = self.stock.company.longName
+        stockNameOutput = stockName
+        if (len(stockName) < dispLineLength):
+            margin = int((dispLineLength-len(stockName))/2)
+            stockNameOutput = ' '*margin + stockName + ' '*margin
 
         # string to print the graham number
         strGrahamNumber = '{str:{strFormat}}{gn:6.2f}'.format(str='Graham number:',gn=self.GrahamNumber,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
@@ -530,24 +561,27 @@ class StockAnalyzer():
 
         """
             ROE - Return on Equity - Eigenkapitalrenidte
+            ROA - Return on Assets
             Financial Leverage
         """
         equity = self.stock.financialData.loc["Total Stockholder Equity"].copy()
         assets = self.stock.financialData.loc["Total Assets"].copy()
 
         leverageList = []
-        strYear, strROE, strLeverage = ' '*6 + '|', '- ROE |', '- LEV |'
+        strYear, strROE, strROA, strLeverage = ' '*6 + '|', '- ROE |', '- ROA |', '- LEV |'
         for date in list(sorted(self.ReturnOnEquity.index.values.copy())):
             strYear = strYear   + '  {year}  |'.format(year=date[:4])
             strROE = strROE + ' {v:6.2f} |'.format(v=self.ReturnOnEquity.loc[date]*100) # in Prozent
+            strROA = strROA + ' {v:6.2f} |'.format(v=self.ReturnOnAssets.loc[date]*100) # in Prozent
             leverageList.append(assets.loc[date]/equity.loc[date])
             strLeverage = strLeverage + ' {v:6.2f} |'.format(v=leverageList[-1])
 
         # Einheit
         strROE = strROE + ' %'
+        strROA = strROA + ' %'
 
-        # Mittleres Wachstum
-        avgROE = sum(self.ReturnOnEquity)/len(self.ReturnOnEquity)*100 # in Prozent
+        # Beurteilung ROE
+        avgROE = sum(self.ReturnOnEquity)/len(self.ReturnOnEquity)*100 # Mittelwert in Prozent
         if avgROE >= 15:
             strRoeComment = '      mittleres ROE > 15% --> sehr gut'
         elif avgROE >= 10:
@@ -555,20 +589,39 @@ class StockAnalyzer():
         else:
             strRoeComment = '      mittleres ROE < 10% --> ACHTUNG!'
 
+        # Beurteilung ROA
+        avgROA = sum(self.ReturnOnAssets)/len(self.ReturnOnAssets)*100 # Mittelwert in Prozent
+        if avgROA > 1.2:
+            strRoaComment = '      ROA > 1.2% --> gut'
+        elif avgROA > 1.0:
+            strRoaComment = '      ROA > 1.0% --> in Ordnung'
+        elif avgROA < 0.7:
+            strRoaComment = '      ROA < 0.7% --> Pruefen, warum so gering!'
+        else:
+            strRoaComment = '      ROA sollte noch etwas besser sein'
+
         # Beurteilung der Leverage
         model = linearRegression(range(len(leverageList)),leverageList)
         # Mittelwert
         avgLeverage = sum(leverageList)/len(leverageList)
-        if avgLeverage > 3.5:
-            strLeverageComment = ' '*6 + 'hohe Leverage (> 3.5) --> ACHTUNG!'
-        elif (avgLeverage > 2.5) and (model.coef_/avgLeverage > 0.2):
-            strLeverageComment = ' '*6 + 'Leverage steigt schnell an --> ACHTUNG!'
+        if 'Banks' in self.stock.company.industry:
+            if avgLeverage > 13:
+                strLeverageComment = ' '*6 + 'hohe Leverage (> 13) --> ACHTUNG!'
+            elif (avgLeverage < 9):
+                strLeverageComment = ' '*6 + 'recht geringe Leverage für Banken (< 9) --> PRUEFEN!'
+            else:
+                strLeverageComment = ' '*6 + 'Leverage ok'
         else:
-            strLeverageComment = ' '*6 + 'Leverage ok'
+            if (avgLeverage > 3.5):
+                strLeverageComment = ' '*6 + 'hohe Leverage (> 3.5) --> ACHTUNG!'
+            elif (avgLeverage > 2.5) and (model.coef_/avgLeverage > 0.2):
+                strLeverageComment = ' '*6 + 'Leverage steigt schnell an --> ACHTUNG!'
+            else:
+                strLeverageComment = ' '*6 + 'Leverage ok'
 
         # String fuer die Ausgabe
         strReturnOnEquity = '{str:{strFormat}}{val:6.2f}'.format(str="Return on Equity: ",val=avgROE,strFormat=stringFormat) + \
-            '% \n' + strYear + '\n' + strROE + '\n' + strLeverage + '\n' + strRoeComment + '\n' + strLeverageComment + '\n'
+            '% \n' + strYear + '\n' + strROE + '\n' + strROA + '\n' + strLeverage + '\n' + strRoeComment + '\n' + strRoaComment + '\n' + strLeverageComment + '\n'
 
 
         """
@@ -597,7 +650,7 @@ class StockAnalyzer():
         """
 
         """
-            Free Cash Flow
+            Free Cash Flow / Sales
         """
         freeCashFlow = self.stock.financialData.loc['freeCashFlow'].copy()
         sales = self.stock.financialData.loc['Total Revenue'].copy()
@@ -638,9 +691,6 @@ class StockAnalyzer():
             strYear = strYear   + '  {year}  |'.format(year=date[:4])
             strValue = strValue + ' {v:5.0f}  |'.format(v=avgSharesList[-1])
 
-        # Einheit
-        strValue = strValue + ' %'
-
         # Mittelwert und Bewertung
         averageSharesGrowth = self.calcGrowth(avgSharesList,percentage=True)
         avgAverageSharesGrowth = sum(averageSharesGrowth)/len(averageSharesGrowth)
@@ -660,15 +710,33 @@ class StockAnalyzer():
         strNumberOfShares = '{str:{strFormat}}'.format(str="Number of Shares (Mio.): ",strFormat=stringFormat) + \
             '\n' + strYear + '\n' + strValue + ' \n' + strAverageShares + '\n'
 
+
+        """
+            Free Cash Flow
+        """
+        freeCashFlow = self.stock.financialData.loc['freeCashFlow'].copy()
+
+        strYear, strValue = ' '*6 + '|', ' '*6 + '|'
+        for date in list(sorted(freeCashFlow.index.values.copy())):
+            strYear = strYear   + '  {year}  |'.format(year=date[:4])
+            strValue = strValue + ' {v:6.2f} |'.format(v=freeCashFlow.loc[date]/10**9) # in Mrd
+
+        # Einheit
+        strValue = strValue + ' Mrd. ' + self.stock.currencySymbol 
+
+        # String fuer die Ausgabe
+        strFreeCashFlow = '{str:{strFormat}}'.format(str="Free Cash Flow: ",strFormat=stringFormat) + \
+            '\n' + strYear + '\n' + strValue + ' \n'
+
         """
             Discounted Cash Flow
         """
-        if self.stock.assumptions is not None:
-            freeCashFlow = self.stock.financialData.loc['freeCashFlow'].copy()
-            freeCashFlowList = [freeCashFlow[date] for date in list(sorted(freeCashFlow.index.values.copy()))]
-            freeCashFlowGrowth = self.calcGrowth(freeCashFlowList,percentage=True)
-            avgFreeCashFlowGrowth = sum(freeCashFlowGrowth)/len(freeCashFlowGrowth)
+        freeCashFlow = self.stock.financialData.loc['freeCashFlow'].copy()
+        freeCashFlowList = [freeCashFlow[date] for date in list(sorted(freeCashFlow.index.values.copy()))]
+        freeCashFlowGrowth = self.calcGrowth(freeCashFlowList,percentage=True)
+        avgFreeCashFlowGrowth = sum(freeCashFlowGrowth)/len(freeCashFlowGrowth)
 
+        if self.stock.assumptions is not None:
             strDiscountedCashFlow = 'Discounted Cash Flow (DCF)\n' + \
                 ' - margin of safety: {v:.1f}%'.format(v=self.stock.assumptions["margin_of_safety"]) + '\n' + \
                 ' - discount rate:    {v:.1f}%'.format(v=self.stock.assumptions["discountRate"]) + '\n' + \
@@ -680,7 +748,8 @@ class StockAnalyzer():
                 '\n' + \
                 '{str:{strFormat}}{val:6.2f}'.format(str="Present Share Value: ",val=self.PresentShareValue,strFormat=stringFormat) + ' ' + self.stock.currencySymbol + '\n'
         else:
-            strDiscountedCashFlow = 'Discounted Cash Flow (DCF)\n' + ' +++ Can\'t be calculated due to missing data +++\n' 
+            strDiscountedCashFlow = 'Discounted Cash Flow (DCF)\n' + ' +++ Can\'t be calculated due to missing data +++\n' + \
+                '   (previous average cash flow growth: {v:.1f}%)'.format(v=avgFreeCashFlowGrowth) + '\n'
 
         # Combine all fragments to a string
         string2Print = sepString + \
@@ -699,6 +768,8 @@ class StockAnalyzer():
             strFreeCashFlowPerSales + \
             sepString + \
             strNumberOfShares + \
+            sepString + \
+            strFreeCashFlow + \
             sepString + \
             strDiscountedCashFlow + \
             sepString + \

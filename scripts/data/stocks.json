@@ -11,6 +11,30 @@
             "Symbol": "AT1.DE",
             "Index": "MDAX",
             "data_file": "aroundtown.json"
+        },
+        {
+            "Name": "Wells Fargo",
+            "Symbol": "WFC",
+            "Index": "",
+            "data_file": "wells_fargo.json"
+        },
+        {
+            "Name": "Bank of America",
+            "Symbol": "BAC",
+            "Index": "",
+            "data_file": "bank_of_america.json"
+        },
+        {
+            "Name": "JP Morgan",
+            "Symbol": "JPM",
+            "Index": "",
+            "data_file": "bank_of_america.json"
+        },
+        {
+            "Name": "Procter & Gamble",
+            "Symbol": "PG",
+            "Index": "",
+            "data_file": "procter_gamble.json"
         }
     ],
     "Index": [

@@ -89,8 +89,9 @@ class Stock:
         # init variables for data, which will be loaded from yahoo finance
         self.info = None
         self.name = None
-        self.ticker = None
+        self._ticker = None
         self.currency = None
+        self._company = None
         
         self.currencySymbol = ''
 
@@ -121,10 +122,10 @@ class Stock:
         self.getPriceEarnigsRatio()
         self.getBalanceSheet()
         self.getFinancials()
-        self.getRecommendations()
+        #self.getRecommendations()
         self.getCashflow()
         self.getKeyStatistics()
-        self.getEstimates()
+        #self.getEstimates()
 
         # monthly historical data
         self.historicalData = self.ticker.history(period="5y", interval = "1wk")
@@ -138,36 +139,56 @@ class Stock:
         firstValue = self.historicalDataRelative.loc[firstDate]
         for row in self.historicalDataRelative.index.values:
             date = npDateTime64_2_str(row)
-            self.historicalDataRelative.loc[date] = self.historicalDataRelative.loc[date]/firstValue*100           
+            self.historicalDataRelative.loc[date] = self.historicalDataRelative.loc[date]/firstValue*100      
 
-
-    def getTicker(self):
-        if DEBUG:
-            print('Creating ticker...')
-
-        if self.symbol is not None:
-            self.ticker = yf.Ticker(self.symbol)
+    @property
+    def ticker(self):
+        if self._ticker is not None:
+            return self._ticker
+        elif self.symbol is not None:
+            self._ticker = yf.Ticker(self.symbol)
+            return self._ticker
         else:
             raise ValueError('Stock symbol missing.')
 
-        if DEBUG:
-            print('Created ticker successfully')
+    @ticker.setter
+    def ticker(self,ticker):
+        if not isinstance(ticker,yf.Ticker):
+            raise TypeError('The ticker "' + str(ticker) + '" is no instance of yfinance.Ticker')
+        else:
+            self._ticker = ticker
+
+    @property
+    def company(self):
+        if self._company is None:
+            info = self.ticker.info
+            c = Company()
+            c.shortName = info['shortName']
+            c.longName = info['longName']
+            c.businessSummary = info['longBusinessSummary']
+            c.zipCode = info['zip']
+            c.country = info['country']
+            c.market = info['market']
+            c.sector = info['sector']
+            c.industry = info['industry']
+            c.enterpriseValue = info['enterpriseValue']
+            c.website = info['website']
+            self._company = c
+
+        return self._company
+
+    @company.setter
+    def company(self,company):
+        if not isinstance(company,Company):
+            raise TypeError('The ticker "' + str(company) + '" is no instance of Stock.Company')
+        else:
+            self._company = company
 
 
     def getInfo(self):
-        if DEBUG:
-            print('Loading information...')
-
         if self.info is not None:
-            return self.info
-        elif self.ticker is None:
-            self.getTicker()
-        
+            return self.info   
         self.info = self.ticker.info
-
-        if DEBUG:
-            print(self.info)
-            print('Information loaded successfully')
 
 
     def getExtraIncomeStatementDate(self):
@@ -179,18 +200,18 @@ class Stock:
 
 
     def getStockName(self):
-        if self.name is not None:
-            return self.name
+        if self.company is None:
+            return self.company.longName
         else:
             if self.info is None:
                 self.getInfo()
         
             if 'longName' in self.info.keys():
-                self.name = self.info['longName']
+                self.company.longName = self.info['longName']
             else:
                 raise KeyError('Missing key "longName" in stock information')
 
-            return self.name
+            return self.company.longName
 
     
     def getBookValuePerShare(self):
@@ -464,37 +485,45 @@ def loadStockFile(stockName,stocksFile='scripts/data/stocks.json'):
     stockData = StockData(stockName=stock["Name"],stockSymbol=stock["Symbol"])
 
     # Auslesen von Symbol und dem Index, in dem die Aktie gelistet ist
-    stockIndex = stock["Index"]
-    allIndexNames = [i["Name"] for i in stockJSON["Index"]]
-    if stockIndex not in allIndexNames:
-        raise ValueError('There is no index named "' + stockIndex + '" in the file "' + stocksFile + '".')
+    if stock["Index"] != "":
+        stockIndex = stock["Index"]
+        allIndexNames = [i["Name"] for i in stockJSON["Index"]]
+        if stockIndex not in allIndexNames:
+            raise ValueError('There is no index named "' + stockIndex + '" in the file "' + stocksFile + '".')
 
-    stockData.indexName = stockIndex
-    stockData.indexSymbol = stockJSON["Index"][allIndexNames.index(stockIndex)]["Symbol"]
+        stockData.indexName = stockIndex
+        stockData.indexSymbol = stockJSON["Index"][allIndexNames.index(stockIndex)]["Symbol"]
+    else:
+        stockData.indexName = None
+        stockData.indexSymbol = None
 
     # Öffnen des zur Aktie zugehoerigen Data-Files mit
     # - der Wachstumsprognose
     # - Daten fuer das DCF-Verfahren
     # - Veroeffentlichungsterminen von Quartals- und Jahreszahlen
-    data_file = 'scripts/data/' + stock["data_file"]
-    if not os.path.isfile(data_file):
-        raise Exception('The file "' + data_file + '" does not exist.')
+    if "data_file" in stock.keys() and (stock["data_file"] != ""):
+        data_file = 'scripts/data/' + stock["data_file"]
 
+        if not os.path.isfile(data_file):
+            raise Exception('The file "' + data_file + '" does not exist.')
 
-    # Laden des zusaetzlichen Files mit den Daten zur Aktie
-    with open(data_file) as f:
-        stockExtraData = json.load(f)
+        # Laden des zusaetzlichen Files mit den Daten zur Aktie
+        with open(data_file) as f:
+            stockExtraData = json.load(f)
 
-    # Annahmen auslesen
-    if "assumptions" not in stockExtraData.keys():
-        raise KeyError('The key "assumptions" is missing in the file "' + data_file + '".')
+        # Annahmen auslesen
+        if "assumptions" not in stockExtraData.keys():
+            raise KeyError('The key "assumptions" is missing in the file "' + data_file + '".')
 
-    stockData.assumptions = stockExtraData["assumptions"]
+        stockData.assumptions = stockExtraData["assumptions"]
 
-    if "dates" not in stockExtraData.keys():
-        raise KeyError('The key "dattes" is missing in the file "' + data_file + '".')
+        if "dates" not in stockExtraData.keys():
+            raise KeyError('The key "dates" is missing in the file "' + data_file + '".')
 
-    stockData.dates = stockExtraData["dates"]
+        stockData.dates = stockExtraData["dates"]
+    else:
+        stockData.dates = None
+        stockData.assumptions = None
 
     return stockData
 
@@ -504,7 +533,7 @@ def loadStockFile(stockName,stocksFile='scripts/data/stocks.json'):
 """
 class StockData():
 
-    def __init__(self,stockName,stockSymbol,indexName='',indexSymbol='',assumptions={},dates=[]):
+    def __init__(self,stockName,stockSymbol,indexName='',indexSymbol='',assumptions={},dates={}):
 
         self._stockName = stockName
         self._stockSymbol = stockSymbol
@@ -551,7 +580,7 @@ class StockData():
 
     @assumptions.setter
     def assumptions(self,assumptionsDict):
-        if not isinstance(assumptionsDict,dict):
+        if (not isinstance(assumptionsDict,dict)) and (assumptionsDict is not None):
             raise TypeError('The assumptions need to be in a dict. ' + assumptionsDict + ' is not allowed.')
         self._assumptions = assumptionsDict
 
@@ -560,11 +589,108 @@ class StockData():
         return self._dates
 
     @dates.setter
-    def dates(self,datesList):
-        if not isinstance(datesList,dict):
-            raise TypeError('The dates need to be in a dict. ' + datesList + ' is not allowed.')
-        self._dates = datesList
+    def dates(self,datesDict):
+        if (not isinstance(datesDict,dict)) and (datesDict is not None):
+            raise TypeError('The dates need to be in a dict. ' + datesDict + ' is not allowed.')
+        self._dates = datesDict
 
     def __str__(self):
         return '<StockData object "' + self._stockName + '" ("' + self._stockSymbol + '")>'
     
+
+class Company():
+
+    def __init__(self):
+        self._shortName = None
+        self._longName = None
+        self._zipCode = None
+        self._sector = None
+        self._businessSummary = None
+        self._country = None
+        self._website = None
+        self._industry = None
+        self._market = None
+        self._enterpriseValue = None
+
+    @property
+    def shortName(self):
+        return self._shortName
+
+    @shortName.setter
+    def shortName(self,name):
+        self._shortName = name
+
+    @property
+    def longName(self):
+        return self._longName
+
+    @longName.setter
+    def longName(self,name):
+        self._longName = name
+
+    @property
+    def zipCode(self):
+        return self._zip
+
+    @zipCode.setter
+    def zipCode(self,zipCode):
+        self._zipCode = zipCode
+
+    @property
+    def sector(self):
+        return self._sector
+
+    @sector.setter
+    def sector(self,sector):
+        self._sector = sector
+
+    @property
+    def businessSummary(self):
+        return self._businessSummary
+
+    @businessSummary.setter
+    def businessSummary(self,summary):
+        self._businessSummary = summary
+
+    @property
+    def country(self):
+        return self._country
+
+    @country.setter
+    def country(self,country):
+        self._country = country
+
+    @property
+    def website(self):
+        return self._website
+
+    @website.setter
+    def website(self,website):
+        self._website = website
+
+    @property
+    def industry(self):
+        return self._industry
+
+    @industry.setter
+    def industry(self,industry):
+        self._industry = industry
+
+    @property
+    def market(self):
+        return self._market
+
+    @market.setter
+    def market(self,market):
+        self._market = market
+
+    @property
+    def enterpriseValue(self):
+        return self._enterpriseValue
+
+    @enterpriseValue.setter
+    def enterpriseValue(self,value):
+        self._enterpriseValue = value
+
+    def __str__(self):
+        return '<Stock.Company object "' + self.shortName + '">'

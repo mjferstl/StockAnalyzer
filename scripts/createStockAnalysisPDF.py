@@ -7,7 +7,7 @@ from classes.StockAnalyzer import StockAnalyzer
 
 ### Eingabe Start
 
-stockName = 'Aroundtown'
+stockName = 'JP Morgan'
 
 ### Eingabe Ende
 
@@ -17,5 +17,5 @@ stock = Stock(stockName=stockName)
 # Analysieren der Daten
 StockAnalyzer(stock,stock.indexSymbol).printBasicAnalysis()
 
-for peer in stock.getPeerGroup().remove(stock.symbol):
-    StockAnalyzer(Stock(stockSymbol=peer)).printBasicAnalysis()
+#for peer in ['BAC','JPM']: #stock.getPeerGroup().remove(stock.symbol):
+ #   StockAnalyzer(Stock(stockSymbol=peer)).printBasicAnalysis()

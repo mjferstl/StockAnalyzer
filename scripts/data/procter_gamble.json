@@ -1,0 +1,27 @@
+{
+    // Annahmen fuer die Ermittlung des inneren Wertes
+    // Basis: Unternehmensanalyse
+    "assumptions": {
+        // Discount Rate in Prozent
+        // Anhaltswerte:
+        // - durchschnittliches Unternehmen: 10.5%
+        // - sehr solides Unternehmen: 9%
+        // - Unternehmen mit hohem Riksio: bis zu 15% 
+        "discountRate": 9,
+
+        // Wachstum des Free Cash Flows. 
+        // Aktuell bei Microsoft ca. 15%
+        "growth_year_1_to_5": 2,  // in den naechsten 1-5 Jahren. Anhaltswert: ~50% des aktuellen Wachstums
+        "growth_year_6_to_10": 2, // in den naechsten 6-10 Jahren. 
+        "growth_year_10ff": 1,    // in über 10 Jahren
+
+        // Margin of safety
+        // Anhaltswerte:
+        // - relativ sicheres Unternehmen mit wirtschaftlichem Graben zur Konkurrenz: 20%
+        // - unsicheres Unternehmen ohne wirtschaftlichem Graben: bis zu 60%
+        "margin_of_safety": 20
+    },
+    // Termine der Veroeffentlichung von Quartals- und Jahreszahlen
+    "dates" : {
+    }
+}
