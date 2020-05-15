@@ -1,0 +1,90 @@
+\documentclass[ %
+paper=a4,					% Papierformat
+11pt,						% Schriftgröße
+DIV15,						% Teilung (DIV9 für 9er-Teilung) für Satzspiegel
+BCOR=5mm,					% Bindekorrektur in mm
+twocolumn=false,		% onecolumn = einspaltig, twocolumn = zweispaltig
+%openright,				% erste Seite des Kapitels immer rechts			
+titlepage, 				% es wird eine Titelseite verwendet
+%parindent,				% neuer Absatz wird links eingerückt (Standard)
+parskip=half-,				% neuer Absatz nach Leerzeile und nicht eingerückt
+twoside=false,			% twoside für zweiseitige Dokumente
+headings=normal, 		% Größe der Überschriften verkleinern
+headinclude,				% Lage von Kopfzeile in Satzspiegel mit einberechnen
+footexclude,				% Lage von Fußzeile in Satzspiegel nicht mit einberechnen
+captions=tableheading,	% Für einen größeren Abstand zwischen Überschrift und Tabelle/Abbildung
+numbers=noenddot,
+%subsectionprefix,		% 
+%fleqn,					% für linksbündige statt zentrierte mathematische Gleichungen
+%leqno,					% für Gleichungsnummern links statt rechts von jeder nummerierten Gleichung
+%toc=listofnumbered,
+toc=bib,
+%listof=totoc, 			% Verzeichnisse im Inhaltsverzeichnis aufführen
+%bibliography=totocnumbered, 	% Literaturverzeichnis im Inhaltsverzeichnis aufführen totoc, totocnumbered
+%showframe,
+%index=totoc,			% Index im Inhaltsverzeichnis aufführen
+%draft						% Status des Dokuments (final/draft)
+]{scrreprt}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage[T1]{fontenc} 
+
+\usepackage{amsmath, amsthm, amssymb}		% Mathematik-Umgeungen und Symbole
+\usepackage[]{siunitx}
+\usepackage[]{xcolor}
+
+\typearea[current]{calc}	            		% Satzspiegel neu berechnen
+\usepackage[top=3.2cm,bottom=3cm,left=3cm,right=2.5cm]{geometry}	
+
+\usepackage[automark,pagestyleset=KOMA-Script,headsepline]{scrlayer-scrpage}
+\ofoot*[\normalfont\thepage]{\normalfont\thepage}
+\cfoot*[]{}
+%\automark[section]{chapter}
+
+\usepackage{lmodern}
+
+\newcommand{\englishName}[1]{\textit{#1}}
+\newcommand{\caution}[1]{\begin{center} \textbf{#1} \end{center}}
+\newcommand{\formulaText}[1]{\text{#1}}
+
+\newcommand{\earnings}[0]{Einnahmen (\englishName{earnings}) }
+\newcommand{\sales}[0]{Umsätze (\englishName{sales}) }
+\newcommand{\netMargin}[0]{Nettogewinn (\englishName{net margin}) }
+\newcommand{\assetTurnover}[0]{Vermögensumsatz (\englishName{asset turnover}) }
+\newcommand{\financialLeverage}[0]{finanzielle Hebelwirkung (\englishName{financial leverage}) }
+\newcommand{\shareholdersEquity}[0]{Eigenkapital (\englishName{shareholder's equity}) }
+\newcommand{\assets}[0]{Vermögen (\englishName{assets}) }
+\newcommand{\returnOnEquity}[0]{Eigenkapitalrenidte (\englishName{return on equity}) }
+\newcommand{\freeCashFlow}[0]{freie Cashflow (\englishName{free cash flow}) }
+
+\newcommand{\note}[1]{
+    \centering
+    \colorbox{lightgray}{\begin{minipage}[t]{0.9\textwidth}
+        \begin{center}
+            #1
+        \end{center}
+    \end{minipage}}
+}
+
+%\newenvironment{note}{\begin{center}\colorbox{red}{\begin{minipage}[t]{0.9\textwidth}#1\end{minipage}}}{\end{center}}
+
+\title{Handbuch Unternehmensanalyse}
+\author{Mathias Ferstl}
+
+\pdfinfo{
+   /Author (\@author)
+   /Title  (\@title)
+   /Subject (Unternehmensanalyse)
+   /Keywords (Aktien;Unternehmen;Analyse)
+}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\include{tex_files/5_Schritte_zur_Analyse}
+
+\end{document}

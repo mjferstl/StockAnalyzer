@@ -1,0 +1,95 @@
+
+
+\chapter{5 Schritte zur Analyse}
+\begin{itemize}
+    \item Wachstum
+    \item Profitabilität
+    \item Finanzielle Gesundheit
+    \item Risiken
+    \item Management
+\end{itemize}
+
+\section{Wachstum}
+
+Ein Unternehmen hat grundsätzlich mehrere Möglickeinten für zukünftiges Wachstum
+\begin{itemize}
+    \item mehr Produkte verkaufen
+    \item höhere Preise für die Produkte festlegen
+    \item neue Produkte und Dienstleistungen anbieten
+    \item andere Unternehmen übernehmen (kein nachhaltiges Wachstum!)
+\end{itemize}
+
+Für das zukünftige Wachstum sollte man sich klar machen, welche dieser Möglichkeiten das Unternehmen für sein zukünftiges Wachstum nutzen kann.
+
+In den Kennzahlen des Unternehmens sind die \earnings hierfür nicht immer aussagekräftig. 
+Stattdessen sollten die Umsätze \sales analysiert werden, um einen Eindruck vom bisherigen Wachtum zu erhalten.
+\caution{Bisheriges Wachstum gibt keine Aussage über zukünftiges Wachstum}
+Wenn das Unternehmen bisher sehr stark gewachsen ist, dann wird sich dieses Wachstum üblicherweise nicht in den nächsten Jahren so rasant fortsetzen.
+
+Wenn sich in den Unternehmenszahlen zeigt, dass das Wachstum der \earnings über einen längeren Zeitraum das Wachstum der \sales übersteigt, dann könnte in den Unternehmenszahlen etwas faul sein!
+Als Grundlage für die Analyse können das Verhältnis von Umsatz zu Einnahmen
+\begin{align}
+    \frac{\formulaText{sales}}{\formulaText{revenues}}
+\end{align}
+sowie die Entwicklung des \englishName{cashflow from operations} herangezogen werden.
+
+\section{Profitabilität}
+Die Profitabilität eines Unternehmens gibt Aufschluss darüber, wie viel Geld eine Firma mit dem investierten Kapital umsetzt.
+Hierfür kann wieder das Wachstum des \englishName{cashflow from operations} betrachtet werden.
+
+Darüber hinaus geben die Kennwerte zum \englishName{return on capital} Aufschluss
+\begin{itemize}
+    \item RoA -- \englishName{Return on Assets}\\
+    Diese Kennzahl gibt an, wie hoch die erzielten Gewinne das Unternehmen pro Dollar ihres Vermögens umsetzen kann.
+    \begin{align}
+        \formulaText{RoA} = \underbrace{\frac{\formulaText{net income}}{\formulaText{sales}}}_{\formulaText{net margin}} \cdot \underbrace{\frac{\formulaText{sales}}{\formulaText{assets}}}_{\formulaText{asset turnover}} = \frac{\formulaText{net income}}{\formulaText{assets}}
+    \end{align}
+    Je höher dieser Kennwert ist, desto besser ist das Unternehmen.
+    Der \netMargin gibt an, wie viel das Unternehmen nach Abzug aller Kosten für ihr Geschäft behält.
+    Die zweite Komponente \assetTurnover gibt Auskunft, wie effizient eine Firma bei der erwirtschaftung des Umsatzes pro Dollar des Vermögens ist.
+
+    \item RoE -- \englishName{Return on Equity}
+    \begin{align}
+        \formulaText{RoE} = \formulaText{RoA} \cdot \underbrace{\frac{\formulaText{assets}}{\formulaText{shareholder's eqity}}}_{\formulaText{financial leverage}} = \frac{\formulaText{net income}}{\formulaText{shareholder's equity}}
+    \end{align}
+    Der Wert für den \financialLeverage kann nicht pauschal beurteilt werden, da übliche Werte von Branche zu Branche unterschiedlich sind. 
+    Um den Wert beurteilen zu können, sollte er daher immer im Vergleich zu den Werten von anderen Unternehmen aus der gleichen Branche betrachtet werden.
+    Generell ist ein nieriger Wert besser, da das Unternehmen dann mehr \shareholdersEquity relativ zum \assets besitzt.
+    Folgende Anhaltswerte können genutzt werden
+    \begin{description}
+        \item[Nicht-Finanzbranche] Wenn die \returnOnEquity in den letzten Jahren konstant über $\SI{10}{\percent}$ ist und das Unternehmen gleichzeitig keinen extremen \financialLeverage ausweist, dann ist das ein \textbf{gutes Zeichen}
+        \item[Finanzbranche] Hier ist der \financialLeverage immer sehr groß, weshalb auf eine \returnOnEquity der letzten Jahre von mindestens $\SI{12}{\percent}$ als Ziel angesetzt werden sollte.
+    \end{description}
+    \caution{\returnOnEquity über $\SI{40}{\percent}$? $\rightarrow zu schön um wahr zu sein$}
+    Unternehmen mit einer extrem hohen \returnOnEquity wurden oftmals vor kurzer Zeit von anderen Unternehmen abgespalten oder haben sehr viele Aktien zurückgekauft. 
+    Es ist auch möglich, dass die Finanzstruktur des Unternehmens diesen Wert verzerrt.
+    Deshalb bedeutet ein extrem hoher Wert nicht automatisch, dass das Unternehmen deutlich besser als die ganze Branche wirtschaftet. 
+
+    \item RoIC -- \englishName{Return on invested Capital}\\
+    Diese Kennzahl ist schwer zu berechnen, weshabl hier auf eine Beschreibug verzichtet wird.
+    \begin{align}
+        \formulaText{RoIC} = \frac{\formulaText{net operating profit after taxes (NOPAT)}}{\formulaText{invested capital}}
+    \end{align}
+    mit
+    \begin{align}
+        \begin{split}
+            \formulaText{invested capital} =\ &\formulaText{total assets}\\ &- \formulaText{accounts payable \& other current assets} \\ &- \formulaText{excess cash (cash needed for day-to-day business)}\\ &- \formulaText{Goodwill}
+        \end{split}
+    \end{align}
+\end{itemize}
+
+Eine hohe Aussagekraft darüber, wie das Unternehmens wirtschaftet, gibt der \textbf{\freeCashFlow}.
+Er gibt an, wie viel Geld das Unternehmen nach Abzug aller Ausgaben am Ende noch übrig hat und gibt somit an, wie viel Geld dem Unternehmen entnommen werden könnte, ohne das Geschäft zu beeinträchtigen.
+Der Wert berechnet sich nach
+\begin{align}
+    \formulaText{free cash flow} = \formulaText{cash flow from operations} - \formulaText{capital spending}
+\end{align}
+Um das Unternehmen zu beurteilen, kann das Verhältnis des Werts zum Umsatz betrachtet werden.
+
+\note{$\frac{\formulaText{free cash flow}}{\formulaText{sales}} > \SI{5}{\percent} \rightarrow \formulaText{solides Unternehmen}$}
+
+
+
+\section{Finanzielle Gesundheit}
+\section{Risiken}
+\section{Management}
