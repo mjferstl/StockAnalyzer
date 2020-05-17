@@ -49,10 +49,6 @@ class StockAnalyzer():
         self.epsWeightYears = None
         self.calcWeightedEps()
 
-        # P/E (Price Earnings Ratio)
-        self.priceEarningsRatio = None
-        self.getPriceEarningsRatio()
-
         self._GrahamNumber = None
         self._Recommendations = None
         self._LevermannScore = None
@@ -314,10 +310,6 @@ class StockAnalyzer():
         else:
             self.meanWeightedEps = self.stock.getBasicDataItem(Stock.EARNINGS_PER_SHARE)
 
-    
-    def getPriceEarningsRatio(self):
-        self.priceEarningsRatio = self.stock.getBasicDataItem(Stock.PE_RATIO)
-
 
     def loadRecommendations(self):
         self._Recommendations = FinnhubClient(self.stock.symbol).getRecommendationsDataFrame()
@@ -364,7 +356,9 @@ class StockAnalyzer():
             # Berechnung der Eigenkapitalrendite fuer jedes Jahr
             dic = {}
             for index in sorted(equity.index, reverse=True):
-                dic[index] = income[index]/equity[index]
+                # ignore NAN-values
+                if (not np.isnan(income[index])) and (not np.isnan(equity[index])):
+                    dic[index] = income[index]/equity[index]
 
             df = pd.Series(dic, index=dic.keys())
             self._ReturnOnEquity = df
@@ -440,9 +434,6 @@ class StockAnalyzer():
 
 
     def printBasicAnalysis(self):
-
-        if self.priceEarningsRatio is None:
-            self.getPriceEarningsRatio()
 
         # variables for formatting the console output
         stringFormat = "35s"
@@ -687,9 +678,11 @@ class StockAnalyzer():
         avgSharesList = []
         strYear, strValue = ' '*6 + '|', ' '*6 + '|'
         for date in list(sorted(averageShares.index.values.copy())):
-            avgSharesList.append(averageShares.loc[date]/10**6) # in Millionen
-            strYear = strYear   + '  {year}  |'.format(year=date[:4])
-            strValue = strValue + ' {v:5.0f}  |'.format(v=avgSharesList[-1])
+            # ignore NAN values
+            if not np.isnan(averageShares.loc[date]):
+                avgSharesList.append(averageShares.loc[date]/10**6) # in Millionen
+                strYear = strYear   + '  {year}  |'.format(year=date[:4])
+                strValue = strValue + ' {v:5.0f}  |'.format(v=avgSharesList[-1])
 
         # Mittelwert und Bewertung
         averageSharesGrowth = self.calcGrowth(avgSharesList,percentage=True)

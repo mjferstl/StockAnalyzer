@@ -43,8 +43,6 @@ DOLLAR = u"Dollar"
 class Stock:
 
     """
-        TODO: growth rate anhand einer regressionsgerade beim EPS berechnen (falls plausibel?)
-        TODO: growth rate anhand einer regressionsgerade beim Cashflow berechnen (falls plausibel?)
         TODO: plotten der strongBuy, buy, hold, sell und strongSell empfehlungen (auch aus mehreren Quellen, z.B. yahoo finance, Finnhub, ...)
         TODO: Settings Datei entwerfen; Standardisierte Felder (zukünftiges CF Wachstum, zuküngtiges Gewinnwachstum) und einen Freitext, \
             dort koennen manuelle Infos oder Hinweise eingetragen werden. Pro Aktie ein File; bei Analysen wird immer der pessimistischste Wert \
@@ -69,7 +67,7 @@ class Stock:
     DATE_FORMAT = '%Y-%m-%d'
 
 
-    def __init__(self,stockName='',stockSymbol=''):
+    def __init__(self,stockName='',stockSymbol='',growthRateEstimate=None, margin_of_safety=None, discountRate=None):
 
         self.symbol = None
         self.indexSymbol = None
@@ -85,6 +83,21 @@ class Stock:
         
         if stockSymbol != '':
             self.symbol = stockSymbol
+            self.assumptions = {}
+
+            if discountRate is not None:
+                self.assumptions["discountRate"] = discountRate
+
+            if growthRateEstimate is not None:
+                growth_year_1_to_5, growth_year_6_to_10, growth_year_10ff = Stock.estimateGrowthRates(growthRateEstimate)
+                self.assumptions["growth_year_1_to_5"] = growth_year_1_to_5
+                self.assumptions["growth_year_6_to_10"] = growth_year_6_to_10
+                self.assumptions["growth_year_10ff"] = growth_year_10ff
+
+            if (margin_of_safety is not None) and (isinstance(margin_of_safety,int) or isinstance(margin_of_safety,float)):
+                self.assumptions["margin_of_safety"] = margin_of_safety 
+            else:
+                self.assumptions["margin_of_safety"] = 40 
 
         # init variables for data, which will be loaded from yahoo finance
         self.info = None
@@ -262,7 +275,7 @@ class Stock:
             self.basicData[self.EARNINGS_PER_SHARE] = self.info['trailingEps']
             
         if self.EARNINGS_PER_SHARE not in self.basicData.keys():
-            raise KeyError('Missing key "trailingEps" or "forwardEps" in stock information')
+            raise KeyError('Missing key "trailingEps" in stock information')
 
         return self.basicData[self.EARNINGS_PER_SHARE]
 
@@ -275,7 +288,7 @@ class Stock:
             self.basicData[self.PE_RATIO] = self.info['trailingPE']
 
         if self.PE_RATIO not in self.basicData.keys():
-            raise KeyError('Missing key "trailingPE" or "forwardPE" in stock information')
+            raise KeyError('Missing key "trailingPE" in stock information')
 
         return self.basicData[self.PE_RATIO]
 
@@ -417,6 +430,10 @@ class Stock:
 
     def getPeerGroup(self):
         return FinnhubClient(self.symbol).getPeerGroup()
+
+    @staticmethod
+    def estimateGrowthRates(growthRate):
+        return growthRate, growthRate/2, min(growthRate/4,3)
 
 
     # Funktion zur Formattierung der Ausgabe
