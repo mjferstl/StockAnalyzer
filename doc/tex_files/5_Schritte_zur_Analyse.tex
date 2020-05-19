@@ -1,6 +1,6 @@
 
 
-\chapter{5 Schritte zur Analyse}
+\chapter{Unternehmensanalyse in 5 Schritten}
 \begin{itemize}
     \item Wachstum
     \item Profitabilität
@@ -28,9 +28,9 @@ Wenn das Unternehmen bisher sehr stark gewachsen ist, dann wird sich dieses Wach
 
 Wenn sich in den Unternehmenszahlen zeigt, dass das Wachstum der \earnings über einen längeren Zeitraum das Wachstum der \sales übersteigt, dann könnte in den Unternehmenszahlen etwas faul sein!
 Als Grundlage für die Analyse können das Verhältnis von Umsatz zu Einnahmen
-\begin{align}
+\begin{equation}
     \frac{\formulaText{sales}}{\formulaText{revenues}}
-\end{align}
+\end{equation}
 sowie die Entwicklung des \englishName{cashflow from operations} herangezogen werden.
 
 \section{Profitabilität}
@@ -38,45 +38,54 @@ Die Profitabilität eines Unternehmens gibt Aufschluss darüber, wie viel Geld e
 Hierfür kann wieder das Wachstum des \englishName{cashflow from operations} betrachtet werden.
 
 Darüber hinaus geben die Kennwerte zum \englishName{return on capital} Aufschluss
-\begin{itemize}
-    \item RoA -- \englishName{Return on Assets}\\
-    Diese Kennzahl gibt an, wie hoch die erzielten Gewinne das Unternehmen pro Dollar ihres Vermögens umsetzen kann.
-    \begin{align}
-        \formulaText{RoA} = \underbrace{\frac{\formulaText{net income}}{\formulaText{sales}}}_{\formulaText{net margin}} \cdot \underbrace{\frac{\formulaText{sales}}{\formulaText{assets}}}_{\formulaText{asset turnover}} = \frac{\formulaText{net income}}{\formulaText{assets}}
-    \end{align}
-    Je höher dieser Kennwert ist, desto besser ist das Unternehmen.
-    Der \netMargin gibt an, wie viel das Unternehmen nach Abzug aller Kosten für ihr Geschäft behält.
-    Die zweite Komponente \assetTurnover gibt Auskunft, wie effizient eine Firma bei der erwirtschaftung des Umsatzes pro Dollar des Vermögens ist.
 
-    \item RoE -- \englishName{Return on Equity}
-    \begin{align}
-        \formulaText{RoE} = \formulaText{RoA} \cdot \underbrace{\frac{\formulaText{assets}}{\formulaText{shareholder's eqity}}}_{\formulaText{financial leverage}} = \frac{\formulaText{net income}}{\formulaText{shareholder's equity}}
-    \end{align}
-    Der Wert für den \financialLeverage kann nicht pauschal beurteilt werden, da übliche Werte von Branche zu Branche unterschiedlich sind. 
-    Um den Wert beurteilen zu können, sollte er daher immer im Vergleich zu den Werten von anderen Unternehmen aus der gleichen Branche betrachtet werden.
-    Generell ist ein nieriger Wert besser, da das Unternehmen dann mehr \shareholdersEquity relativ zum \assets besitzt.
-    Folgende Anhaltswerte können genutzt werden
-    \begin{description}
-        \item[Nicht-Finanzbranche] Wenn die \returnOnEquity in den letzten Jahren konstant über $\SI{10}{\percent}$ ist und das Unternehmen gleichzeitig keinen extremen \financialLeverage ausweist, dann ist das ein \textbf{gutes Zeichen}
-        \item[Finanzbranche] Hier ist der \financialLeverage immer sehr groß, weshalb auf eine \returnOnEquity der letzten Jahre von mindestens $\SI{12}{\percent}$ als Ziel angesetzt werden sollte.
-    \end{description}
-    \caution{\returnOnEquity über $\SI{40}{\percent}$? $\rightarrow zu schön um wahr zu sein$}
-    Unternehmen mit einer extrem hohen \returnOnEquity wurden oftmals vor kurzer Zeit von anderen Unternehmen abgespalten oder haben sehr viele Aktien zurückgekauft. 
-    Es ist auch möglich, dass die Finanzstruktur des Unternehmens diesen Wert verzerrt.
-    Deshalb bedeutet ein extrem hoher Wert nicht automatisch, dass das Unternehmen deutlich besser als die ganze Branche wirtschaftet. 
+%
+%%
+\subsection{RoA -- \englishName{Return on Assets}}
 
-    \item RoIC -- \englishName{Return on invested Capital}\\
-    Diese Kennzahl ist schwer zu berechnen, weshabl hier auf eine Beschreibug verzichtet wird.
-    \begin{align}
-        \formulaText{RoIC} = \frac{\formulaText{net operating profit after taxes (NOPAT)}}{\formulaText{invested capital}}
-    \end{align}
-    mit
-    \begin{align}
-        \begin{split}
-            \formulaText{invested capital} =\ &\formulaText{total assets}\\ &- \formulaText{accounts payable \& other current assets} \\ &- \formulaText{excess cash (cash needed for day-to-day business)}\\ &- \formulaText{Goodwill}
-        \end{split}
-    \end{align}
-\end{itemize}
+Diese Kennzahl gibt an, wie hoch die erzielten Gewinne das Unternehmen pro Dollar ihres Vermögens umsetzen kann.
+\begin{equation}
+    \formulaText{RoA} = \underbrace{\frac{\formulaText{net income}}{\formulaText{sales}}}_{\formulaText{net margin}} \cdot \underbrace{\frac{\formulaText{sales}}{\formulaText{assets}}}_{\formulaText{asset turnover}} = \frac{\formulaText{net income}}{\formulaText{assets}}
+\end{equation}
+Je höher dieser Kennwert ist, desto besser ist das Unternehmen.
+Der \netMargin gibt an, wie viel das Unternehmen nach Abzug aller Kosten für ihr Geschäft behält.
+Die zweite Komponente \assetTurnover gibt Auskunft, wie effizient eine Firma bei der erwirtschaftung des Umsatzes pro Dollar des Vermögens ist.
+
+%
+%%
+\subsection{RoE -- \englishName{Return on Equity}}
+
+\begin{equation}
+    \formulaText{RoE} = \formulaText{RoA} \cdot \underbrace{\frac{\formulaText{assets}}{\formulaText{shareholder's eqity}}}_{\formulaText{financial leverage}} = \frac{\formulaText{net income}}{\formulaText{shareholder's equity}}
+\end{equation}
+Der Wert für den \financialLeverage kann nicht pauschal beurteilt werden, da übliche Werte von Branche zu Branche unterschiedlich sind. 
+Um den Wert beurteilen zu können, sollte er daher immer im Vergleich zu den Werten von anderen Unternehmen aus der gleichen Branche betrachtet werden.
+Generell ist ein nieriger Wert besser, da das Unternehmen dann mehr \shareholdersEquity relativ zum \assets besitzt.
+Folgende Anhaltswerte können genutzt werden
+\begin{description}
+    \item[Nicht-Finanzbranche] Wenn die \returnOnEquity in den letzten Jahren konstant über $\SI{10}{\percent}$ ist und das Unternehmen gleichzeitig keinen extremen \financialLeverage ausweist, dann ist das ein \textbf{gutes Zeichen}
+    \item[Finanzbranche] Hier ist der \financialLeverage immer sehr groß, weshalb auf eine \returnOnEquity der letzten Jahre von mindestens $\SI{12}{\percent}$ als Ziel angesetzt werden sollte.
+\end{description}
+\caution{\returnOnEquity über $\SI{40}{\percent}$? $\rightarrow zu schön um wahr zu sein$}
+Unternehmen mit einer extrem hohen \returnOnEquity wurden oftmals vor kurzer Zeit von anderen Unternehmen abgespalten oder haben sehr viele Aktien zurückgekauft. 
+Es ist auch möglich, dass die Finanzstruktur des Unternehmens diesen Wert verzerrt.
+Deshalb bedeutet ein extrem hoher Wert nicht automatisch, dass das Unternehmen deutlich besser als die ganze Branche wirtschaftet. 
+
+%
+%%
+\subsection{RoIC -- \englishName{Return on invested Capital}}
+
+Diese Kennzahl ist schwer zu berechnen, weshabl hier auf eine Beschreibug verzichtet wird.
+\begin{equation}
+    \formulaText{RoIC} = \frac{\formulaText{net operating profit after taxes (NOPAT)}}{\formulaText{invested capital}}
+\end{equation}
+mit
+\begin{align}
+    \begin{split}
+        \formulaText{invested capital} =\ &\formulaText{total assets}\\ &- \formulaText{accounts payable \& other current assets} \\ &- \formulaText{excess cash (cash needed for day-to-day business)}\\ &- \formulaText{Goodwill}
+    \end{split}
+\end{align}
+
 
 Eine hohe Aussagekraft darüber, wie das Unternehmens wirtschaftet, gibt der \textbf{\freeCashFlow}.
 Er gibt an, wie viel Geld das Unternehmen nach Abzug aller Ausgaben am Ende noch übrig hat und gibt somit an, wie viel Geld dem Unternehmen entnommen werden könnte, ohne das Geschäft zu beeinträchtigen.
@@ -85,11 +94,108 @@ Der Wert berechnet sich nach
     \formulaText{free cash flow} = \formulaText{cash flow from operations} - \formulaText{capital spending}
 \end{align}
 Um das Unternehmen zu beurteilen, kann das Verhältnis des Werts zum Umsatz betrachtet werden.
+\formulaNote{\frac{\formulaText{free cash flow}}{\formulaText{sales}} > \SI{5}{\percent} \rightarrow \formulaText{solides Unternehmen}}
 
-\note{$\frac{\formulaText{free cash flow}}{\formulaText{sales}} > \SI{5}{\percent} \rightarrow \formulaText{solides Unternehmen}$}
-
-
-
+%
+%%
+%%%
 \section{Finanzielle Gesundheit}
+
+Bei der Beurteilung der finanziellen Gesundheit eines Unternehmens werden die gesamten Vermögenswerte betrachtet, die im Balance Sheet aufgeführt sind.
+Das Verhältnis von Schulden oder Vermögenswerten zum Eigenkapital gibt Auskunft, wie fest das Unternehmen im Sattel sitzt und eine ggf. kommende Krise meistern kann.
+
+%
+%%
+\subsection{Financial leverage}
+
+Die Kennzahl beschreibt das Verhältnis der Vermögenswerte zum Eigenkapital. 
+Für die meisten Branchen sollte dieses Verhältnis nicht über 4 liegen, da das Unternehmen im Falle einer Krise wahrscheinlich seine Schulden nicht weiter tilgen kann und zusätzliche Kreidte aufnehmen muss oder in die Insolvenz abrutschen kann.
+\formulaNote{\frac{\formulaText{assets}}{\formulaText{eqity}} > 4 \rightarrow \formulaText{hohes Risiko}}
+
+%
+%%
+\subsection{Times interest earned}
+
+Diese Kennzahl beschreibt, wie oft das Unternehmen mit seinen Gewinnen die Schulden hätte zurückzahlen können. 
+Ein hoher Wert deutet dabei auf ein geringes Risiko hin. 
+Der Wert muss aber immer Branchenabhängig betrachtet werden.
+\begin{equation}
+    \formulaText{Times interest earned} = \frac{\formulaText{EBIT}}{\formulaText{interest expense}}
+\end{equation}
+Wenn dieses Verhältnis im Verlauf über die letzten Jahre betrachtet wird, dann zeigt sich auch, ob das Unternehmen beispielsweise risikoreicher wird, wenn der Wert kleiner wird.\\
+
+%
+%%
+\subsection{Current ratio}
+
+Dieses Verhältnis beschreibt, wie viel kurzfirstiges Geld das Unternehmen nutzen kann, um alle kurzfristigen Schulden zu begleichen.
+Die Werte hierzu finden sich im Balance Sheet.
+\begin{equation}
+    \formulaText{current ratio} = \frac{\formulaText{current assets}}{\formulaText{current liablities}}
+\end{equation}
+Gernerell ist davon auszugehen, dass sich bei einem Wert über $1.5$ keine kurzfristigen finanziellen Probleme beim Unternehmen abzeichnen, sollte plötzlich das kurzfristig geliehene Geld zurückgezahlt werden müssen.
+
+Das \inventories wird auch zu den $\formulaText{current assets}$ gerechnet, kann jedoch ggf. nicht zu diesem Preis kurzfrisitg verkauft werden. 
+Bei Unternehmen aus dem produzierenden Gewerbe, die einen signifikanten Anteil an Vermögenswerten als \inventories halten, sollte dies berücksichtigt werden und deshalb das sog. \textbf{Quick ratio} herangezogen werden.
+\begin{equation}
+    \formulaText{quick ratio} = \frac{\formulaText{current assets} - \formulaText{inventories}}{\formulaText{current liablities}}
+\end{equation}
+Hier deutet ein Wert um $1.0$ an, dass es keine kurzfristigen Probleme geben sollte, jedoch ist ein Vergleich mit den Konkurrenten aus der Branche hilfreicher als dieser Grenzwert.
+
+%
+%%
+%%%
 \section{Risiken}
+Neben den genannten Kennzahlen sollten auch die Risiken des Unternehmens abgeschätzt werden.
+Hierfür ist es hilfreich, aktiv nach Gründen zu suchen, die für einen Verkauf der Anteile am Unternehmen sprechen.
+Dies können beispielsweise negative Analystenmeinungen und Prognosen sein oder auch Signale, die vielleicht in einigen Monaten für einen Verkauf sprechen würden, wie z.B. ein aktuell stattfindender Boom in der Branche, der aber nach einiger Zeit wieder nachlassen wird.
+
+%
+%%
+%%%
 \section{Management}
+Das Management eines Unternehmens anhand von eindeutigen Kennzahlen zu beurteilen ist schwierig, da hier vielmehr die einzelnen Personen, wie z.B. der CEO, beurteilt werden sollten.
+Auch ohne diese Personen persönlich kennenzulernen gibt es einige Anhaltspunkte, die einen Überblick über die Personen, die das Unternehmen führen, zu erlangen.
+
+%
+%%
+\subsection{Vergütung (Compensation)}
+
+Da Unternehmen diese Zahlen berichten müssen, lässt sich hierzu recht einfach ein Überblick erlangen.
+Im sog. \glqq proxy statement\grqq\ ist unter Anderem aufgeführt, wie hoch die Vergütung der Vorstände ist.
+Die \glqq summary compensation table\grqq\ listet auf, wie viel sich das Management für eine Periode auszahlen lässt.
+Auch hier ist ein Vergleich zu anderen ähnlich großen Unternehmen aus der Branche hilfreich.
+
+Die Vergütung des Managements setzt sich in der Regel aus einem fixen Anteil und einem performance-abhängigem Anteil, der von der Erreichung von Unternehmenszielen abhängig ist, zusammen.
+Folgende Grundsätze sollten geprüft werden
+\begin{itemize}
+    \item Boni für eine Vergrößerung des Unternehmens, was durch den Kauf von anderen Unternehmen zustanden gekommen ist, sind als nicht gut zu bewerten.
+        Diese stellen meist keine besondere Leistung des Managements dar.
+    \item In guten Zeiten sollte den Managern mehr bezahlt werden, jedoch analog dazu in schlechten Zeiten auch weniger. Es sollte überprüft werden, ob dies der Fall ist.
+    \item Halten die Vorstände Anteile am Unternehmen in Form von Aktien (und nicht nur Optionen)? 
+        Falls diese kaum oder keine Aktien halten, dann sollte sich die Frage gestellt werden, ob diese Personen an einer positiven Entwicklung des Unternehmens interessiert sind.
+\end{itemize}
+
+%
+%% 
+\subsection{Charakter (Character)}
+
+Die Beurteilung des Charakters von Vorständen und CEO ist ohne persönliche Kenntnis schwierig. 
+Aber auch hier gibt es ein paar Möglchkeiten, sich einen Eindruck zu verschaffen.
+\begin{itemize}
+    \item Bereichern sich Angehörige der Personen im Management an dem Unternehmen, z.B. in Form von großen Aufträgen. 
+        Im sog. \glqq 10-K-filling\grqq\ ist unter dem Punkt \glqq related-party transactions\grqq\ eine Übersicht, über diese Verbindungen.
+    \item Die Biografie und die Historie der Personen im Aufsichtsrat liefert Auskunft, ob hier erfahrene Manager das Unternehmen leiten oder Neulinge mit wenig Erfahrung.
+    \item Aus den Veröffentichungen des Unternehmens und der Medien zeigt sich, ob sich das Management auch Fehler eingesteht und diese auch an die Aktionäre kommuniziert.
+        Im \glqq letter to shareholders\grqq\ lässt sich davon ein Eindruck gewinnen. 
+    \item Es kann eingeschätzt werden, ob sich der CEO um das Unternehmen oder den Aktienkurs kümmert. 
+        Wenn auch Entscheidungen getroffen werden, die sich zwar schlecht auf den Aktienkurs auswirken, aber das langfristige Überleben und den Erfolg des Unternehmens sichern, dann kümmert sich der CEO eher um das Unternehmen, was langfristig auch gut für die Aktionäre ist.
+    \item Da die Personen in den Vorständen und im Aufsichtrat über der Zeit üblicherweise wechseln werden, kann hier Aufschluss über die allgemeine Stimmung im Management erhalten werden.
+        Wenn die Personen oft wecheln, dann ist dies ein schlechtes Anzeichen, da es auch negative Auswirkungen auf die Stabilität eines Unternehmens haben kann.
+\end{itemize}
+
+%
+%% 
+\subsection{Operations}
+
+Beurteilung der Performance des Unternehmens während der Amtszeit des Managements

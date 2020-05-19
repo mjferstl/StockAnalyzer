@@ -57,14 +57,19 @@ toc=bib,
 \newcommand{\assets}[0]{Vermögen (\englishName{assets}) }
 \newcommand{\returnOnEquity}[0]{Eigenkapitalrenidte (\englishName{return on equity}) }
 \newcommand{\freeCashFlow}[0]{freie Cashflow (\englishName{free cash flow}) }
+\newcommand{\inventories}[0]{Inventar (\englishName{inventories}) }
 
-\newcommand{\note}[1]{
-    \centering
-    \colorbox{lightgray}{\begin{minipage}[t]{0.9\textwidth}
-        \begin{center}
-            #1
-        \end{center}
-    \end{minipage}}
+\newcommand{\formulaNote}[1]{
+    \begin{center}
+        \vspace*{-1em}
+        \colorbox{lightgray}{
+            \begin{minipage}[t]{0.9\textwidth}
+                \begin{equation*}
+                    #1
+                \end{equation*}
+            \end{minipage}
+        }
+    \end{center}
 }
 
 %\newenvironment{note}{\begin{center}\colorbox{red}{\begin{minipage}[t]{0.9\textwidth}#1\end{minipage}}}{\end{center}}

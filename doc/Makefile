@@ -19,4 +19,4 @@ OUT := pdflatex $(MAIN_TEX).tex -jobname=$(DOC_NAME)
 
 .PHONY : clean
 clean:
-	-rm -f *.log *.aux *.dvi *.toc
+	-rm -f *.log *.aux *.dvi *.toc tex_files/*.aux
