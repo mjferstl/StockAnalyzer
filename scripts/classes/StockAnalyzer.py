@@ -46,7 +46,6 @@ class StockAnalyzer():
         # variables for anayzing the stock
         # EPS
         self.meanWeightedEps = None
-        self.epsWeightYears = None
         self.calcWeightedEps()
 
         self._GrahamNumber = None
@@ -66,6 +65,13 @@ class StockAnalyzer():
 
         # analyze the stock
         self.analyzeStock()
+
+        #print(self.stock.financialData.loc['Net Income',:])
+        #print(self.stock.financialsAsReported.loc['NetIncomeLoss',:])
+
+        #print(self.stock.financialData.loc['freeCashFlow',:])
+        #print(self.stock.financialsAsReported.loc['freeCashFlow',:])
+        
 
     
     def analyzeStock(self):
@@ -147,10 +153,23 @@ class StockAnalyzer():
             self._GrahamNumber = 0
 
     """
+        Check if all necessary assumptions for DCF is available
+    """
+    def isAssumptionsCompleteForDCF(self):
+        return (self.stock.assumptions is not None) and \
+            ('discountRate' in self.stock.assumptions.keys()) and \
+            ('margin_of_safety' in self.stock.assumptions.keys()) and \
+            ('growth_year_1_to_5' in self.stock.assumptions.keys()) and\
+            ('growth_year_6_to_10' in self.stock.assumptions.keys()) and\
+            ('growth_year_10ff' in self.stock.assumptions.keys())
+
+
+    """
         Discounted Cash Flow Verfahren
     """
     def calcDCF(self,detailed=True,generatePlot=False):
-        if self.stock.assumptions is not None:
+        # check if all needed assumptions data is available
+        if self.isAssumptionsCompleteForDCF():
             # Free Chashflow der letzten Jahre
             CF = self.stock.financialData.loc['freeCashFlow',:].copy()
 
@@ -232,7 +251,7 @@ class StockAnalyzer():
             if generatePlot:
                 createPlot([years,years[-1],year],[CF_sorted,FCFstartValue,FCF[:-1]],legend_list=['historical free cash flows','start value for DCF method','estimated free cash flows'])
         else:
-            print(' +++ Discounted Cash Flow Analysis failed du to missing data +++ ')
+            print(' +++ Discounted Cash Flow Analysis failed due to missing data +++ ')
 
 
     """
@@ -306,7 +325,6 @@ class StockAnalyzer():
             # calculate the weighted eps 
             weightedEps = [factor*value for value,factor in zip(epsHistory,weighting)]
             self.meanWeightedEps = sum(weightedEps)/sum(weighting)
-            self.epsWeightYears = len(epsHistory)
         else:
             self.meanWeightedEps = self.stock.getBasicDataItem(Stock.EARNINGS_PER_SHARE)
 
@@ -729,7 +747,7 @@ class StockAnalyzer():
         freeCashFlowGrowth = self.calcGrowth(freeCashFlowList,percentage=True)
         avgFreeCashFlowGrowth = sum(freeCashFlowGrowth)/len(freeCashFlowGrowth)
 
-        if self.stock.assumptions is not None:
+        if self.isAssumptionsCompleteForDCF():
             strDiscountedCashFlow = 'Discounted Cash Flow (DCF)\n' + \
                 ' - margin of safety: {v:.1f}%'.format(v=self.stock.assumptions["margin_of_safety"]) + '\n' + \
                 ' - discount rate:    {v:.1f}%'.format(v=self.stock.assumptions["discountRate"]) + '\n' + \

@@ -103,10 +103,13 @@ class Stock:
         self.info = None
         self.name = None
         self._ticker = None
-        self.currency = None
+        self._currency = None
         self._company = None
-        
-        self.currencySymbol = ''
+        self._peerGroup = None
+        self._currencySymbol = ''
+
+        self._finnhubClient = None
+        self._financialsAsReported = None
 
         # dict and DataFrame to store all information
         self.basicData = {}
@@ -127,7 +130,6 @@ class Stock:
     def loadMainData(self):
         self.getStockName()
         self.getBookValuePerShare()
-        self.getCurrency()
         self.getCurrentStockValue()
         self.getEarningsPerShare()
         self.getExtraIncomeStatementDate()
@@ -135,7 +137,7 @@ class Stock:
         self.getPriceEarnigsRatio()
         self.getBalanceSheet()
         self.getFinancials()
-        #self.getRecommendations()
+        self.getRecommendations()
         self.getCashflow()
         self.getKeyStatistics()
         #self.getEstimates()
@@ -197,6 +199,77 @@ class Stock:
         else:
             self._company = company
 
+    @property
+    def peerGroup(self):
+        if self._peerGroup is None:
+            self._peerGroup = FinnhubClient(self.symbol).getPeerGroup()
+
+        return self._peerGroup
+
+    @peerGroup.setter
+    def peerGroup(self,peerGroup):
+        self._peerGroup = peerGroup
+
+    @property
+    def currency(self):
+        if self._currency is None:
+            if self.info is None:
+                self.getInfo()
+
+            if 'currency' in self.info.keys():
+                self._currency = self.info['currency']
+            else:
+                raise KeyError('Missing key "currency" in stock information')
+
+        return self._currency
+
+    @currency.setter
+    def currency(self,currency):
+        if isinstance(currency,str):
+            self._currency = currency
+        else:
+            raise TypeError('Cannot set "currency" of type "' + type(currency) + '". It needs to be of type "str"')
+
+    @property
+    def currencySymbol(self):
+        if self._currencySymbol == '':
+            if self._currency == 'EUR':
+                self._currencySymbol = EURO
+            else:
+                self._currencySymbol = DOLLAR
+        
+        return self._currencySymbol
+
+
+    @property
+    def FinnhubClient(self):
+        if self._finnhubClient is None:
+            self._finnhubClient = FinnhubClient(self.symbol)
+
+        return self._finnhubClient
+
+    @FinnhubClient.setter
+    def FinnhubClient(self,finnhubClient):
+        if isinstance(finnhubClient,FinnhubClient):
+            self._finnhubClient = finnhubClient
+        else:
+            raise TypeError('Argument "finnhubClient" must be of type "FinnhubClient". You passed a object of type "' + type(finnhubClient) + '"')
+
+
+    @property
+    def financialsAsReported(self):
+        if self._financialsAsReported is None:
+            self._financialsAsReported = self.FinnhubClient.getFinancialsAsReportedDataFrame()
+
+        return self._financialsAsReported
+
+    @financialsAsReported.setter
+    def financialsAsReported(self,financialsAsReported):
+        if isinstance(financialsAsReported,DataFrame):
+            self._financialsAsReported = financialsAsReported
+        else:
+            raise TypeError('Argument "financialsAsReported" must be of type "pandas.DataFrame". You passed a object of type "' + type(financialsAsReported) + '"')
+
 
     def getInfo(self):
         if self.info is not None:
@@ -237,23 +310,8 @@ class Stock:
             raise KeyError('Missing Key "bookValue"')
 
         return self.basicData[self.BOOK_VALUE_PER_SHARE]
+        
 
-    
-    def getCurrency(self):
-        if self.info is None:
-            self.getInfo()
-
-        if 'currency' in self.info.keys():
-            self.currency = self.info['currency']
-        else:
-            raise KeyError('Missing key "currency" in stock information')
-
-        if self.currency == 'EUR':
-            self.currencySymbol = EURO
-        else:
-            self.currencySymbol = DOLLAR
-
-    
     def getCurrentStockValue(self):
         if self.info is None:
             self.getInfo()
@@ -427,9 +485,6 @@ class Stock:
         else:
             return value
 
-
-    def getPeerGroup(self):
-        return FinnhubClient(self.symbol).getPeerGroup()
 
     @staticmethod
     def estimateGrowthRates(growthRate):
