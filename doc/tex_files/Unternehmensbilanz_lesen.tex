@@ -12,21 +12,32 @@ Die wichtigsten Informationen finden sich dabei in drei verschiedenen Blättern,
 %%
 %%%
 \section{Balance Sheet}
-Dieses Blatt gibt einen Überblick über das Vermögen und die Schulden eines Unternehmens und beschreibt den aktuellen finanziellen Zustand der Firma.
-Wie der Name andeutet, befinden sich die Zahlen in diesem Blatt im Gleichgewicht (\textit{balance}), da Gleichgewicht
+Das \englishName{Balance Sheet} gibt einen Überblick über das Vermögen und die Schulden eines Unternehmens und beschreibt somit den aktuellen finanziellen Zustand der Firma.
+Wie der Name andeutet, befinden sich die Zahlen in diesem Blatt im Gleichgewicht (\textit{balance}), da folgendes Gleichgewicht gilt:
 \formulaNote{\formulaText{Assets} - \formulaText{Liablilities} = \formulaText{Equity}}
+
 
 %
 %%
 \subsection{Asset Accounts}
 
 \begin{description}
-    \item[Current Assets] sind die Vermögenswerte, die innerhalb eines Finanzzykluses zu Geld gemacht werden.
-        Diese umfassen Folgendes 
+    \item[Current Assets] sind die Vermögenswerte, die innerhalb eines Finanzzykluses (normalerweise 1 Jahr) zu Geld gemacht werden.
+        Diese umfassen \englishName{cash and equivalents}, \englishName{short-term investments}, \englishName{accounts receivable} und \englishName{inventories}.
         \begin{description}
             \item[Cash and Equivalents and short-term-Investments] beschreibt, was das Unternehmen kurzfristig an Geld verfügbar hat.
-            \item[Accounts Receivable] umfasst alle Einnahmen, die dem Unternehmen noch geschuldet werden, da beispielsweise die Ware schon an den Kunden geliefert wurde, dessen Zahlung aber noch nicht eingegangen ist.
-            \item[Inventories] umfasst Kapital, das in Form von Material etc. vorhanden ist und zur Herstellung der Produkte genutzt wird.
+            \item[Accounts Receivable] umfasst das Geld, das das Unternehmen noch nicht erhalten hat, aber erwartet demnächst zu erhalten.
+                Wenn ein Produkt bereits an den Kunen ausgeliefert wurde, dessen Zahlung aber noch nicht eingegangen ist, dann wird der in der Kasse noch fehlende Betrag hier addiert.
+                Wenn dieser Posten deutlich schneller wächst als der Umsatz, dann verbucht das Unternehmen viele Einnahmen, obwohl es dafür noch kein Geld erhalten hat.
+                Dies kann zu Problemen führen, wenn das Unternehmen einen Teil der erwarteten Einnahmen gar nicht erhält.
+                Manchmal findet sich im \englishName{Balance Sheet} auch ein Posten mit der Bezeichnung \englishName{allowance for doubtful accounts}, der den Betrag beschreibt, der dem Unternehmen zwar geschuldet wird, den das Unternehmen aber nicht mehr erwartet vom Kunden tatsächlich zu erhalten.
+            \item[Inventories] umfasst Kapital, das in Form von Materialien, teilweise fertigen Produkten, hergestellten aber noch nicht verkauften Produkten etc. vorhanden ist.
+                Der angegebene Betrag muss immer mit Vorsicht betrachtet werden, da die hierzu gezählten Produkte und Materialien zwar den angegebenen Preis haben können, es aber nicht sicher ist, dass bei einem plötzlichen Verkauf dieser Produkte und Materialien auch dieser Preis erzielt werden kann.
+                Wenn ein Unternehmen weniger Material und fertige Produkte \glqq herumliegen \grqq\ hat, dann könnte es profitabler sein, da es weniger Kapital in diesen Vermögenswerten gebunden hat.
+                Eine Aussage hierzu liefert der Kennwert \textbf{\englishName{inventory turnover}}, der angibt, wie oft das gesamte Inventar während eines Finanzzykluses umgeschlagen wurde.
+                \begin{formel}
+                    \formulaText{inventory turnover} = \frac{\formulaText{cost of goods sold}}{\formulaText{inventories}}
+                \end{formel}
         \end{description}
     \item[Asset Accounts] sind langfristige Vermögenswerte, die nicht innerhalb eines Finanzzykluses zu Geld gemacht werden.
         Hierzu zählt Folgendes:
@@ -34,8 +45,10 @@ Wie der Name andeutet, befinden sich die Zahlen in diesem Blatt im Gleichgewicht
             \item[PP\&E Property, Plant and Equipment] umfasst das Kapital, das in Fabriken, Gebäuden, Grundstücken, Maschinen etc. gebunden ist.
                 Wenn man diese Zahl mit dem Wert der gesamten Vermögenswerte (\englishName{Total Assets}) vergleicht, dann kann man ein Gefühl bekommen, wie kapitalintensiv das Unternehmen ist. 
             \item[Investments] ist das Kapital, das in langfristigen Anleihen und Aktien anderer Unternehmen steckt.
+                Wenn dies einen signifikaten Anteil des Gesamtvermögens eines Unternehmens ausmacht, dann sollte man heraufinden, wo dieses Geld steckt, wie sicher es ist und wie lange es gebunden ist. 
             \item[Intangible Assets] beschreibt alle immateriellen Güter. Hierzu zählt z.B. auch der sog. \englishName{Goodwill}. 
-                Dies beschreibt das Geld, das bei einer Übernahme des Unternehmens notwendig ist und den Sachwert der Firma übersteigt, da z.B. auch der Ruf und die Marke \glqq gekauft\grqq\ werden.   
+                Dieser beschreibt das Geld, das bei einer Übernahme des Unternehmens notwendig ist und den Sachwert der Firma übersteigt, da z.B. auch der Ruf und die Marke \glqq gekauft\grqq\ werden.   
+                Generell sollte dieser Wert mit Skepsis betrachtet werden, da Firmen den Wert generell sehr hoch ansetzen und es nicht sicher ist, dass dieser Betrag auch gerechtfertigt ist.
         \end{description}
 \end{description}
 
@@ -83,28 +96,35 @@ Der einzige Eintrag, der hier einen Blick wert ist, ist unter dem Namen \english
 Dieses Blatt beinhaltet die Einnahmen und Ausgaben innerhalb eines Finanzzykluses und beschreibt somit die aktuelle Entwicklung des Unternehmens.
 
 \begin{description}
-    \item[Revenue/Sales] Umsatz der Firma.
-    \item[Cost of Sales] Geld, das nötig war um den Umsatz zu generieren.
+    \item[Revenue/Sales] Umsatz der Firma innerhalb eines Finanzzykluses.
+        Große Unternehmen brechen den Umsatz auch oft auf einzelne Produkte, Geschäftsbereiche oder Regionen auf der Erde herunter.
+        Firmen können ihren Umsatz aber zu verschiedenen Zeitpunkten verbuchen, da z.B. ein Softwarehersteller hier einen großen Geldbetrag vermerken kann, wenn ein Produkt an den Kunden ausgeliefert wird, wohingegen eine Service-Firma den Umsatz über die gesamte Vertragslaufzeit gleichmäßig verteilt.
+    \item[Cost of Sales] Geld, das aufgewendet werden musste um den aufgeführten Umsatz zu generieren.
+        Manchaml aus unter dem Namen \englishName{Cost of goods sold} aufgeführt. 
     \item[Gross Profit] enspricht der Differenz aus Umsatz und den Aufwendungen für den Umsatz und beschreibt das Geld aus dem gesamten Umsatz, das nicht für die Bereit- und Herstellung der Produkte erforderich ist.
-        \begin{equation}
+        \begin{formel}
             \formulaText{Gross Profit} = \formulaText{Revenue} - \formulaText{Cost of Sales}
-        \end{equation}
+        \end{formel}
         Der prozentuale Anteil wird auch als \englishName{Gross margin} bezeichnet. 
         \formulaNote{\formulaText{Gross margin} = \frac{\formulaText{Gross Profit}}{\formulaText{Revenue}}} 
     \item[Selling, General and Administrative Expenses (SG\&A)] Ausgaben für Marketing, Verwaltung etc.
-        Bei einer Firma mit großen Vertriebsnetzwerk, das viele Beschäftigte im Vertrieb hat, ist dieser Posten oftmals groß.
-    \item[Depreciation and Amortization] Abschreibungen
+        Bei einer Firma mit großen Vertriebsnetzwerk, das viele Beschäftigte im Vertrieb hat ist dieser Posten oftmals groß, wobei diese Unternehmen meist aufgrund der höheren erzielten Produktepreise auch eine hohe \englishName{gross margin} haben.
+    \item[Depreciation and Amortization] Abschreibungen von Gebäuden etc.
     \item[Nonrecurring Charges/Gains] Einmalzahlungen und -ausgaben.
         Dieser Posten sollte in der Regel einen geringen Anteil im Vergleich zum Umsatz darstellen.
         Falls ein Unternehmen im \englishName{Income Statement} immer wieder nicht-unwesentiche Beträge als Einmalzahlungen aufführt, dann sollte man hellhörig werden!
         Es könnte sein, dass die Firma dubiose Ausgaben vermehrt als Einmalzahlungen deklariert.
-    \item[Operating Income] Profit des Unternehmens aus dem Kerngeschäft
-        \begin{equation}
+    \item[Operating Income] Unternehmensergebnis. Dieser Wert wird auch genutzt, um die \englishName{operation margin} zu ermitteln, die eine Grundlage für den Vergleich verschiedener Firmen und Industrien bildet.
+        \begin{formel}
             \formulaText{Operating Income} = \formulaText{Revenues} - \left( \formulaText{Cost of Sales} + \formulaText{Cost of Sales}\right)
-        \end{equation}
-    \item[Interest Income/Expense] Ausgaben für bzw. Einnahmen aus Anleihen
-    \item[Taxes] Steuern
-    \item[Net Income] Gewinn nach Abzug aller Ausgaben
+        \end{formel}
+    \item[Interest Income/Expense] Ausgaben für bzw. Einnahmen aus Anleihen. 
+        Manchmal werden die Einnahmen und Ausgaben auch unter dem Punkt \englishName{net interest income} verrechnet.
+    \item[Taxes] Steuern.
+        Wenn dieser Wert über die Jahre stark schwankt, dann versucht das Unternehmen möglicherweise mit Steuertricks Geld zu sparen. 
+        Es ist deshalb möglich, dass die Firma das \glqq gesparte\grqq\ Geld irgendwann noch nachzahlen muss.
+    \item[Net Income] Gewinn nach Abzug aller Ausgaben.
+        Dieser Wert wird meistens von den Unternehmen hervorgehoben, jedoch sollte man ihn mit Vorsicht genießen, da er durch Einmahlzahlungen und Kapitalerträge verzerrt werden kann.
     \item[Number of Shares] Anzahl der im Umlauf befindlichen Aktien, die zur Berechnung des Gewinns pro Aktie genutzt werden.
         Hier gibt es verschiedene Arten
         \begin{description}
@@ -140,7 +160,7 @@ Die üblichen Einträge in dieser Auflistung sind nachfolgend beschrieben.
     \item[Depreciation and Amortization] Abschreibungen. Ist ebenfalls aus dem \englishName{Income Statement} übernommen.
     \item[Tax Benefits from Employee Stock Plans] Aktienoptionen für Angestellte des Unternehmens
     \item[Changes in working captal] Veränderung in \englishName{Accounts Receivable}, \englishName{Accounts Payable} und \englishName{Inventories}
-    \item[One-Time charges]   
+    \item[One-Time charges] Ebenfalls aus dem \englishName{Income Statement} übernommen (unter \englishName{Nonrecurring Charges}) 
 \end{description}
 
 Es können auch noch mehr oder feiner untergliederte Einträge vorhanden sein.

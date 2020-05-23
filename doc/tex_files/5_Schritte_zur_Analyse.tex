@@ -28,9 +28,9 @@ Wenn das Unternehmen bisher sehr stark gewachsen ist, dann wird sich dieses Wach
 
 Wenn sich in den Unternehmenszahlen zeigt, dass das Wachstum der \earnings über einen längeren Zeitraum das Wachstum der \sales übersteigt, dann könnte in den Unternehmenszahlen etwas faul sein!
 Als Grundlage für die Analyse können das Verhältnis von Umsatz zu Einnahmen
-\begin{equation}
+\begin{formel}
     \frac{\formulaText{sales}}{\formulaText{revenues}}
-\end{equation}
+\end{formel}
 sowie die Entwicklung des \englishName{cashflow from operations} herangezogen werden.
 
 \section{Profitabilität}
@@ -44,9 +44,9 @@ Darüber hinaus geben die Kennwerte zum \englishName{return on capital} Aufschlu
 \subsection{RoA -- \englishName{Return on Assets}}
 
 Diese Kennzahl gibt an, wie hoch die erzielten Gewinne das Unternehmen pro Dollar ihres Vermögens umsetzen kann.
-\begin{equation}
+\begin{formel}
     \formulaText{RoA} = \underbrace{\frac{\formulaText{net income}}{\formulaText{sales}}}_{\formulaText{net margin}} \cdot \underbrace{\frac{\formulaText{sales}}{\formulaText{assets}}}_{\formulaText{asset turnover}} = \frac{\formulaText{net income}}{\formulaText{assets}}
-\end{equation}
+\end{formel}
 Je höher dieser Kennwert ist, desto besser ist das Unternehmen.
 Der \netMargin gibt an, wie viel das Unternehmen nach Abzug aller Kosten für ihr Geschäft behält.
 Die zweite Komponente \assetTurnover gibt Auskunft, wie effizient eine Firma bei der erwirtschaftung des Umsatzes pro Dollar des Vermögens ist.
@@ -55,9 +55,9 @@ Die zweite Komponente \assetTurnover gibt Auskunft, wie effizient eine Firma bei
 %%
 \subsection{RoE -- \englishName{Return on Equity}}
 
-\begin{equation}
+\begin{formel}
     \formulaText{RoE} = \formulaText{RoA} \cdot \underbrace{\frac{\formulaText{assets}}{\formulaText{shareholder's eqity}}}_{\formulaText{financial leverage}} = \frac{\formulaText{net income}}{\formulaText{shareholder's equity}}
-\end{equation}
+\end{formel}
 Der Wert für den \financialLeverage kann nicht pauschal beurteilt werden, da übliche Werte von Branche zu Branche unterschiedlich sind. 
 Um den Wert beurteilen zu können, sollte er daher immer im Vergleich zu den Werten von anderen Unternehmen aus der gleichen Branche betrachtet werden.
 Generell ist ein nieriger Wert besser, da das Unternehmen dann mehr \shareholdersEquity relativ zum \assets besitzt.
@@ -66,7 +66,7 @@ Folgende Anhaltswerte können genutzt werden
     \item[Nicht-Finanzbranche] Wenn die \returnOnEquity in den letzten Jahren konstant über $\SI{10}{\percent}$ ist und das Unternehmen gleichzeitig keinen extremen \financialLeverage ausweist, dann ist das ein \textbf{gutes Zeichen}
     \item[Finanzbranche] Hier ist der \financialLeverage immer sehr groß, weshalb auf eine \returnOnEquity der letzten Jahre von mindestens $\SI{12}{\percent}$ als Ziel angesetzt werden sollte.
 \end{description}
-\caution{\returnOnEquity über $\SI{40}{\percent}$? $\rightarrow zu schön um wahr zu sein$}
+\caution{\returnOnEquity über $\SI{40}{\percent}$ ? $\rightarrow \formulaText{zu schön um wahr zu sein}$}
 Unternehmen mit einer extrem hohen \returnOnEquity wurden oftmals vor kurzer Zeit von anderen Unternehmen abgespalten oder haben sehr viele Aktien zurückgekauft. 
 Es ist auch möglich, dass die Finanzstruktur des Unternehmens diesen Wert verzerrt.
 Deshalb bedeutet ein extrem hoher Wert nicht automatisch, dass das Unternehmen deutlich besser als die ganze Branche wirtschaftet. 
@@ -76,9 +76,9 @@ Deshalb bedeutet ein extrem hoher Wert nicht automatisch, dass das Unternehmen d
 \subsection{RoIC -- \englishName{Return on invested Capital}}
 
 Diese Kennzahl ist schwer zu berechnen, weshabl hier auf eine Beschreibug verzichtet wird.
-\begin{equation}
+\begin{formel}
     \formulaText{RoIC} = \frac{\formulaText{net operating profit after taxes (NOPAT)}}{\formulaText{invested capital}}
-\end{equation}
+\end{formel}
 mit
 \begin{align}
     \begin{split}
@@ -90,9 +90,9 @@ mit
 Eine hohe Aussagekraft darüber, wie das Unternehmens wirtschaftet, gibt der \textbf{\freeCashFlow}.
 Er gibt an, wie viel Geld das Unternehmen nach Abzug aller Ausgaben am Ende noch übrig hat und gibt somit an, wie viel Geld dem Unternehmen entnommen werden könnte, ohne das Geschäft zu beeinträchtigen.
 Der Wert berechnet sich nach
-\begin{align}
+\begin{formel}
     \formulaText{free cash flow} = \formulaText{cash flow from operations} - \formulaText{capital spending}
-\end{align}
+\end{formel}
 Um das Unternehmen zu beurteilen, kann das Verhältnis des Werts zum Umsatz betrachtet werden.
 \formulaNote{\frac{\formulaText{free cash flow}}{\formulaText{sales}} > \SI{5}{\percent} \rightarrow \formulaText{solides Unternehmen}}
 
@@ -119,9 +119,9 @@ Für die meisten Branchen sollte dieses Verhältnis nicht über 4 liegen, da das
 Diese Kennzahl beschreibt, wie oft das Unternehmen mit seinen Gewinnen die Schulden hätte zurückzahlen können. 
 Ein hoher Wert deutet dabei auf ein geringes Risiko hin. 
 Der Wert muss aber immer Branchenabhängig betrachtet werden.
-\begin{equation}
+\begin{formel}
     \formulaText{Times interest earned} = \frac{\formulaText{EBIT}}{\formulaText{interest expense}}
-\end{equation}
+\end{formel}
 Wenn dieses Verhältnis im Verlauf über die letzten Jahre betrachtet wird, dann zeigt sich auch, ob das Unternehmen beispielsweise risikoreicher wird, wenn der Wert kleiner wird.\\
 
 %
@@ -131,16 +131,16 @@ Wenn dieses Verhältnis im Verlauf über die letzten Jahre betrachtet wird, dann
 
 Dieses Verhältnis beschreibt, wie viel kurzfirstiges Geld das Unternehmen nutzen kann, um alle kurzfristigen Schulden zu begleichen.
 Die Werte hierzu finden sich im Balance Sheet.
-\begin{equation}
+\begin{formel}
     \formulaText{current ratio} = \frac{\formulaText{current assets}}{\formulaText{current liablities}}
-\end{equation}
+\end{formel}
 Gernerell ist davon auszugehen, dass sich bei einem Wert über $1.5$ keine kurzfristigen finanziellen Probleme beim Unternehmen abzeichnen, sollte plötzlich das kurzfristig geliehene Geld zurückgezahlt werden müssen.
 
 Das \inventories wird auch zu den $\formulaText{current assets}$ gerechnet, kann jedoch ggf. nicht zu diesem Preis kurzfrisitg verkauft werden. 
 Bei Unternehmen aus dem produzierenden Gewerbe, die einen signifikanten Anteil an Vermögenswerten als \inventories halten, sollte dies berücksichtigt werden und deshalb das sog. \textbf{Quick ratio} herangezogen werden.
-\begin{equation}
+\begin{formel}
     \formulaText{quick ratio} = \frac{\formulaText{current assets} - \formulaText{inventories}}{\formulaText{current liablities}}
-\end{equation}
+\end{formel}
 Hier deutet ein Wert um $1.0$ an, dass es keine kurzfristigen Probleme geben sollte, jedoch ist ein Vergleich mit den Konkurrenten aus der Branche hilfreicher als dieser Grenzwert.
 
 %
