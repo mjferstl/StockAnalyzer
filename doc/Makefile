@@ -1,8 +1,8 @@
 
-DOC_NAME := Handbuch_Aktienanalyse
+DOC_NAME := Handbuch_Unternehmensanalyse
 MAIN_TEX := summary
 
-TEX_FLAGS := -output-format=pdf -iteraction=nonestopmode
+TEX_FLAGS := -output-format=pdf -iteraction=nonestopmode -jobname=$(DOC_NAME)
 
 default: runPdfLatex
 
@@ -15,7 +15,7 @@ runPdfLatex:
 	@echo $(OUT)
 	$(OUT)
 
-OUT := pdflatex $(MAIN_TEX).tex -jobname=$(DOC_NAME)
+OUT := pdflatex $(MAIN_TEX).tex $(TEX_FLAGS)
 
 .PHONY : clean
 clean:

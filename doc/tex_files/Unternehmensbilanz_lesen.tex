@@ -1,16 +1,25 @@
 
-
+%
+%%
+%%%
+%%%%
 \chapter{Unternehmensbilanzen lesen}
 
 Die börsennotierten Unternehmen berichten ihre Ergebnisse überlicherweise jedes Quartal  (\englishName{10-Q}) und legen am Ende eines Geschäftsjahres auch eine Jahresbilanz (\englishName{10-K}) vor.
 Die wichtigsten Informationen finden sich dabei in drei verschiedenen Blättern, die nachfolgend näher betrachtet werden.
 
+%
+%%
+%%%
 \section{Balance Sheet}
 Dieses Blatt gibt einen Überblick über das Vermögen und die Schulden eines Unternehmens und beschreibt den aktuellen finanziellen Zustand der Firma.
 Wie der Name andeutet, befinden sich die Zahlen in diesem Blatt im Gleichgewicht (\textit{balance}), da Gleichgewicht
 \formulaNote{\formulaText{Assets} - \formulaText{Liablilities} = \formulaText{Equity}}
 
+%
+%%
 \subsection{Asset Accounts}
+
 \begin{description}
     \item[Current Assets] sind die Vermögenswerte, die innerhalb eines Finanzzykluses zu Geld gemacht werden.
         Diese umfassen Folgendes 
@@ -19,46 +28,142 @@ Wie der Name andeutet, befinden sich die Zahlen in diesem Blatt im Gleichgewicht
             \item[Accounts Receivable] umfasst alle Einnahmen, die dem Unternehmen noch geschuldet werden, da beispielsweise die Ware schon an den Kunden geliefert wurde, dessen Zahlung aber noch nicht eingegangen ist.
             \item[Inventories] umfasst Kapital, das in Form von Material etc. vorhanden ist und zur Herstellung der Produkte genutzt wird.
         \end{description}
-    \item[Asset Accounts] sind Vermögenswerte, die nicht innerhalb eines Finanzzykluses zu Geld gemacht werden.
-        Hierzu zählen Folgende Posten
+    \item[Asset Accounts] sind langfristige Vermögenswerte, die nicht innerhalb eines Finanzzykluses zu Geld gemacht werden.
+        Hierzu zählt Folgendes:
         \begin{description}
-            \item[PP\&E Property, Plant and Equipment] umfasst das Kapital, das in Fabriken, Gebäuden etc. steckt.
-            \item[Investments] ist das Kapital, das in Anlagen und Aktien anderer Unternehmen steckt.
+            \item[PP\&E Property, Plant and Equipment] umfasst das Kapital, das in Fabriken, Gebäuden, Grundstücken, Maschinen etc. gebunden ist.
+                Wenn man diese Zahl mit dem Wert der gesamten Vermögenswerte (\englishName{Total Assets}) vergleicht, dann kann man ein Gefühl bekommen, wie kapitalintensiv das Unternehmen ist. 
+            \item[Investments] ist das Kapital, das in langfristigen Anleihen und Aktien anderer Unternehmen steckt.
             \item[Intangible Assets] beschreibt alle immateriellen Güter. Hierzu zählt z.B. auch der sog. \englishName{Goodwill}. 
                 Dies beschreibt das Geld, das bei einer Übernahme des Unternehmens notwendig ist und den Sachwert der Firma übersteigt, da z.B. auch der Ruf und die Marke \glqq gekauft\grqq\ werden.   
         \end{description}
 \end{description}
 
+%
+%%
 \subsection{Liabilitiy Accounts}
 
+Dieser Anteil umfasst alle Verflichtungen (Schulden) des Unternehmens.
+Diese werden in zwei Rubriken unterteilt.
+
+\begin{description}
+    \item[Current Liabilities] Geld, das das Unternehmen innerhalb eines Finanzzykluses ausgeben wird. 
+        Dies umfasst folgende Posten.
+        \begin{description}
+            \item[Accounts Payable] Geld, das das Unternehmen Anderen schuldet, z.B. in Form offener Rechnungen. 
+                Wenn das Unternehmen viele Rechnungen erst später bezahlt und das Geld deshalb noch in der Firma bleibt, dann hat dies positive Auswirkungen auf den \englishName{cash flow}. 
+            \item[Short-Term-Borrowings] kurzfristig geliehenes Geld, das innerhalb eines Jahres zurückgezahlt werden muss. 
+                Wenn das Unternehmen viel Geld kurzfristig geliehen hat, aber nicht so viel Geld kurzfristig verfügbar hat, dann kann das Unternehmen kurzfristige Geldprobleme haben.
+                siehe auch \englishName{current ratio} in Kapitel \ref{sec:current_ratio}.
+        \end{description}
+    \item[Noncurrent Liabilities] Geld, das das Unternehmen nicht innerhalb des eines Finanzzykluses ausgibt und deshalb langfristige Verbindlichkeiten beschreiben.
+        \begin{description}
+            \item[Long-Term-Debt] Geld, das das Unternehmen z.B. der Bank schuldet, aber nicht in nächster Zeit zurückzahlen muss. 
+        \end{description}
+\end{description}
+
+%
+%%
+\subsection{Stockholder's equity}
+
+Dieser Posten umfasst das Eigenkapital des Unternehmens, das in Form von Aktien im Umlauf ist.
+Die meisten der aufgeführten Unterpunkte haben eine geringe Relevanz.
+Der einzige Eintrag, der hier einen Blick wert ist, ist unter dem Namen \englishName{Retained Earnings} aufgeführt.
+\begin{description}
+    \item[Retained Earnings] Kapital, das das Unternehmen über seine gesamte Lebensdauer generiert hat, abzüglich Dividendenzahlungen und Aktienrückkäufen, da dieses Geld zurück an die Aktionäre gewandert ist.
+        Jedes Jahr, in dem das Unternehmen Gewinn macht und diesen nich vollständig an die Aktionäre ausschüttet, steigt dieser Betrag.
+        Wenn das Unternehmen bisher kein Geld behalten sondern sogar verloren bzw. mehr ausgegeben hat, dann hat dieser Eintrag einen negativen Wert.
+        Generell kann hier geprüft werden, wie das Unternehmen Geld über die Jahre einnimmt.
+\end{description}
+
+%
+%%
+%%%
 \section{Income Statement}
 Dieses Blatt beinhaltet die Einnahmen und Ausgaben innerhalb eines Finanzzykluses und beschreibt somit die aktuelle Entwicklung des Unternehmens.
 
 \begin{description}
-    \item[Revenue/Sales]
-    \item[Cost of Sales]
-    \item[Gross Profit]
-    \item[Selling, General and Administrative Expenses (SG\&A)]
-    \item[Depreciation and Amortization]
-    \item[Nonrecurring Charges/Gains]
-    \item[Operating Income]
-    \item[Interest Income/Expense]
-    \item[Taxes]
-    \item[Net Income]
-    \item[Number of Shares]
-    \item[Earnings per Share]            
+    \item[Revenue/Sales] Umsatz der Firma.
+    \item[Cost of Sales] Geld, das nötig war um den Umsatz zu generieren.
+    \item[Gross Profit] enspricht der Differenz aus Umsatz und den Aufwendungen für den Umsatz und beschreibt das Geld aus dem gesamten Umsatz, das nicht für die Bereit- und Herstellung der Produkte erforderich ist.
+        \begin{equation}
+            \formulaText{Gross Profit} = \formulaText{Revenue} - \formulaText{Cost of Sales}
+        \end{equation}
+        Der prozentuale Anteil wird auch als \englishName{Gross margin} bezeichnet. 
+        \formulaNote{\formulaText{Gross margin} = \frac{\formulaText{Gross Profit}}{\formulaText{Revenue}}} 
+    \item[Selling, General and Administrative Expenses (SG\&A)] Ausgaben für Marketing, Verwaltung etc.
+        Bei einer Firma mit großen Vertriebsnetzwerk, das viele Beschäftigte im Vertrieb hat, ist dieser Posten oftmals groß.
+    \item[Depreciation and Amortization] Abschreibungen
+    \item[Nonrecurring Charges/Gains] Einmalzahlungen und -ausgaben.
+        Dieser Posten sollte in der Regel einen geringen Anteil im Vergleich zum Umsatz darstellen.
+        Falls ein Unternehmen im \englishName{Income Statement} immer wieder nicht-unwesentiche Beträge als Einmalzahlungen aufführt, dann sollte man hellhörig werden!
+        Es könnte sein, dass die Firma dubiose Ausgaben vermehrt als Einmalzahlungen deklariert.
+    \item[Operating Income] Profit des Unternehmens aus dem Kerngeschäft
+        \begin{equation}
+            \formulaText{Operating Income} = \formulaText{Revenues} - \left( \formulaText{Cost of Sales} + \formulaText{Cost of Sales}\right)
+        \end{equation}
+    \item[Interest Income/Expense] Ausgaben für bzw. Einnahmen aus Anleihen
+    \item[Taxes] Steuern
+    \item[Net Income] Gewinn nach Abzug aller Ausgaben
+    \item[Number of Shares] Anzahl der im Umlauf befindlichen Aktien, die zur Berechnung des Gewinns pro Aktie genutzt werden.
+        Hier gibt es verschiedene Arten
+        \begin{description}
+            \item[basic] beschreibt die Anzahl der tatsächlich im Umlauf befindlichen Aktien. Dieser Wert kann aber ignoriert werden und stattdessen der nachfolgende betrachtet werden.
+            \item[diluted] verwässterte Anzahl an Aktien, die auch Optionen, die in Aktien umgewandelt werden können, wandelbare Anleihen (\englishName{convertible bonds}) und Ähnliches berücksichtigt.
+                Dieser Wert gibt an, auf welchen Anteil am gesamten Unternehmen der eigene Anteil in Form erworbener Aktien sinken kann. 
+        \end{description}
+    \item[Earnings per Share] (EPS) Gewinn pro Akie. Diese Kennzahl wird auch oft für den Entwicklung über die letzten Jahre genutzt. 
+        Analysten schätzen meist auch das EPS der nächsten Quartale und des kommenden Jahres.  
+        \formulaNote{\formulaText{EPS} = \frac{\formulaText{Net Income}}{\formulaText{Number of Shares}}}    
 \end{description}
 
 
-
+%
+%%
+%%%
 \section{Statement of Cash Flows}
 Dieses Blatt zeigt auf, wie viel Geld tatsächlich in und aus dem Unternehmen geflossen ist.
 Hier taucht nur Geld auf, das innerhalb der Finanzperiode tatsächlich in das oder aus dem Unternehmen ging.
 So kann z.B. Geld, das ein Kunde erst in der Zukunft bezahlen wird, im Income Statement bereits enthalten sein, im Statement of Cash Flows ist es jedoch nicht eingerechnet, da es das Unternehmen noch nicht erhalten hat.
 
+Einer der wichtigsten Kennwerte, der \freeCashFlow lässt sich aus den hier aufgeführten Zahlen ermitteln.
+\formulaNote{\formulaText{Free cash flow} = \formulaText{operating cash flow} - \formulaText{Capital Expenditures}}
+
+%
+%%
 \subsection{Cash Flow from operating activities}
 
+Dieser Anteil beschreibt das Geld, das das Unternehmen aus seinem Kerngeschäft, z.B. Verkauf von Produkten, tatsächlich eingenommen hat.
+Die üblichen Einträge in dieser Auflistung sind nachfolgend beschrieben.
+\begin{description}
+    \item[Net Income] Nettogewinn. Diese Zahl ist aus dem \englishName{Income Statement} übernommen.
+    \item[Depreciation and Amortization] Abschreibungen. Ist ebenfalls aus dem \englishName{Income Statement} übernommen.
+    \item[Tax Benefits from Employee Stock Plans] Aktienoptionen für Angestellte des Unternehmens
+    \item[Changes in working captal] Veränderung in \englishName{Accounts Receivable}, \englishName{Accounts Payable} und \englishName{Inventories}
+    \item[One-Time charges]   
+\end{description}
+
+Es können auch noch mehr oder feiner untergliederte Einträge vorhanden sein.
+Die Summe aller aufgelisteten Beträge beschreibt das \textbf{\englishName{Net cash provided by operating activities}} und wird oft auch als \englishName{operating cash flow} bezeichnet.
+
+%
+%%
 \subsection{Cash Flow from investing activities}
 
+Dieser Anteil beschreibt die Aufwendungen des Unternehmens für Investitionen und Ähnliches.
+\begin{description}
+    \item[Capital Expenditures] Alle notwendigen Ausgaben um das Geschäft am Laufen zu halten. 
+        Hierzu zählen z.B. die Ausgaben für \englishName{PP\&E}.
+    \item[Investment Proceeds] Anlagen des Unternehmens  
+\end{description}
+
+%
+%%
 \subsection{Cash Flow from financing activities}
 
+Dieser Abschnitt beinhaltet alle Transaktionen mit den Unternehmenseigner und Kredtigebern.
+\begin{description}
+    \item[Dividends Paid] Dividendenzahlungen an die Aktionäre
+    \item[Issuance/Purchase of Common Stock] Eingenommenes Geld aus der Ausgabe neuer Aktien oder aufgewendetes Geld für Aktienrückkäufe.
+    \item[Issuance/Repayments of Debt] Aufnahme von Krediten und Rückzahlungen  
+\end{description}
