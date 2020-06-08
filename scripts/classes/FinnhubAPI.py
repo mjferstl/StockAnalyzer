@@ -1,14 +1,29 @@
 
+
 import requests
 import numpy as np
 from datetime import datetime
 from pandas import DataFrame
+from utils.generic import npDateTime64_2_str
+
+
+NET_INCOME = 'Net Income'
+FREE_CASH_FLOW = 'freeCashFlow'
+REVENUES = 'Total Revenue'
+STOCKHOLDERS_EQUITY = 'Total Stockholder Equity'
+ASSETS = 'Total Assets'
+CASH_FROM_OPERATING_ACTIVITIES = 'Total Cash From Operating Activities'
+DILUTED_AVERAGE_SHARES = 'dilutedAverageShares'
+OPERATING_INCOME = 'Operating Income'
+EBIT = 'Ebit'
 
 
 class FinnhubClient():
 
     APIkey = "bq8r88frh5rc96c0kjf0"
     baseUrl = "https://finnhub.io/api/v1/"
+
+    NOT_DATA_VALUE = np.nan
 
     def __init__(self,symbol):
         self.symbol = symbol
@@ -100,15 +115,16 @@ class FinnhubClient():
 
     def getFinancialsAsReportedDataFrame(self,quarterly=False):
 
+        df_fullData = DataFrame()
+        df_mainData = DataFrame()
+
         # get reported financial data
         data = self.getFinancialsAsReported(quarterly=quarterly)
 
         # if no data is available, then an empty DataFrame is returned
         # the reason for receiving no data is perhaps, that the company is not from the US
         if len(data) == 0:
-            return DataFrame()
-
-        df = DataFrame()
+            return df_fullData, df_mainData
 
         for d in data:
             date = self.__getDateFromTime(d['endDate'])
@@ -117,19 +133,19 @@ class FinnhubClient():
             # run over all entries in the balance sheet
             balanceSheet = d['report']['bs']
             for bselem in balanceSheet:
-                df.loc[bselem,date] = balanceSheet[bselem]
+                df_fullData.loc[bselem,date] = balanceSheet[bselem]
 
             # run over all entires in the income statement
             incomeStatement = d['report']['ic']
             for icelem in incomeStatement:
-                df.loc[icelem,date] = incomeStatement[icelem]
+                df_fullData.loc[icelem,date] = incomeStatement[icelem]
 
             # run over all entires in the statement of cash flows
             statementOfCashFlows = d['report']['cf']
             for cfelem in statementOfCashFlows:
-                df.loc[cfelem,date] = statementOfCashFlows[cfelem]
+                df_fullData.loc[cfelem,date] = statementOfCashFlows[cfelem]
 
-            # Calculate the free cash flow
+            ## Free cash flow
             cashFlowFromOperations = None 
             if ('NetCashProvidedByUsedInOperatingActivities' in statementOfCashFlows):
                 cashFlowFromOperations = statementOfCashFlows['NetCashProvidedByUsedInOperatingActivities']
@@ -147,11 +163,39 @@ class FinnhubClient():
             if (cashFlowFromOperations is not None):
                 # e.g. for bank companies there is no capitalSpending in the statement of cashflows
                 if (capitalSpending is not None):
-                    df.loc['freeCashFlow',date] = cashFlowFromOperations - capitalSpending
+                    df_mainData.loc[FREE_CASH_FLOW,date] = cashFlowFromOperations - capitalSpending
                 else:
-                    df.loc['freeCashFlow',date] = cashFlowFromOperations
+                    df_mainData.loc[FREE_CASH_FLOW,date] = cashFlowFromOperations
 
-        return df
+            ## Net income
+            df_mainData.loc[NET_INCOME,date] = self._getValueFromDict(incomeStatement,'NetIncomeLoss')
+
+            ## Revenues/Sales
+            key = 'Revenues'
+            key2 = 'RevenueFromContractWithCustomerExcludingAssessedTax'
+            df_mainData.loc[REVENUES,date] = self._getValueFromDict(incomeStatement,[key,key2])
+
+            ## Stock Holders Equity
+            df_mainData.loc[STOCKHOLDERS_EQUITY,date] = self._getValueFromDict(balanceSheet,'StockholdersEquity')
+
+            ## Assets
+            df_mainData.loc[ASSETS,date] = self._getValueFromDict(balanceSheet,'Assets')
+
+            ## Cash from operating activities
+            key = 'NetCashProvidedByUsedInOperatingActivities'
+            key2 = 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'
+            df_mainData.loc[CASH_FROM_OPERATING_ACTIVITIES,date] = self._getValueFromDict(statementOfCashFlows,[key,key2])
+
+            ## Number of diluted average shares
+            df_mainData.loc[DILUTED_AVERAGE_SHARES,date] = self._getValueFromDict(incomeStatement,'WeightedAverageNumberOfDilutedSharesOutstanding')
+
+            ## Operating income
+            df_mainData.loc[OPERATING_INCOME,date] = self._getValueFromDict(incomeStatement,'OperatingIncomeLoss')
+
+            ## Ebit
+            df_mainData.loc[EBIT,date] = self._getValueFromDict(incomeStatement,'OperatingIncomeLoss')
+            
+        return df_fullData, df_mainData
 
 
     def __getDateFromTime(self,dateTimeString,format='%Y-%m-%d %H:%M:%S'):
@@ -164,3 +208,15 @@ class FinnhubClient():
             return r.json()
         else:
             return []
+
+
+    def _getValueFromDict(self,statement,keys):
+
+        if isinstance(keys,str):
+            keys = [keys]
+
+        for key in keys:
+            if key in statement.keys():
+                return statement[key]
+        
+        return self.NOT_DATA_VALUE

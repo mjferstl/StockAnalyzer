@@ -22,6 +22,7 @@ if main_path not in sys.path:
 from utils.yfinance_extension import loadExtraIncomeStatementData, load_CashFlow, load_KeyStatistics
 from utils.generic import mergeDataFrame, npDateTime64_2_str
 from classes.FinnhubAPI import FinnhubClient
+from classes.FinancialDataManager import DataLoader
 
 # ---------- VARIABLES ----------
 
@@ -62,6 +63,10 @@ class Stock:
     DIVIDEND_YIELD = 'dividendYield'
     MARKET_CAP = 'marketCap'
     SHARES_OUTSTANDING = 'sharesOutstanding'
+
+    # global variables
+    NET_INCOME = 'Net Income'
+    FREE_CASH_FLOW = 'freeCashFlow'
 
     # Format des Datums
     DATE_FORMAT = '%Y-%m-%d'
@@ -107,9 +112,11 @@ class Stock:
         self._company = None
         self._peerGroup = None
         self._currencySymbol = ''
+        self._test = None
+        self._dataLoader = None
 
         self._finnhubClient = None
-        self._financialsAsReported = None
+        self._financialStatements= None
 
         # dict and DataFrame to store all information
         self.basicData = {}
@@ -132,13 +139,10 @@ class Stock:
         self.getBookValuePerShare()
         self.getCurrentStockValue()
         self.getEarningsPerShare()
-        self.getExtraIncomeStatementDate()
         self.getDividend()
         self.getPriceEarnigsRatio()
-        self.getBalanceSheet()
-        self.getFinancials()
+        self.loadFinancialStatements()
         self.getRecommendations()
-        self.getCashflow()
         self.getKeyStatistics()
         #self.getEstimates()
 
@@ -240,49 +244,37 @@ class Stock:
         
         return self._currencySymbol
 
+    
+    @property
+    def __DataLoader(self):
+        if self._dataLoader is None:
+            self._dataLoader = DataLoader(self.symbol)
+        return self._dataLoader
+
+    @__DataLoader.setter
+    def __DataLoader(self,dataLoader):
+        if isinstance(dataLoader,DataLoader):
+            self._dataLoader = dataLoader
+        else:
+            raise TypeError('Argument "dataLoader" must be of type "DataLoader". You passed a object of type "' + type(dataLoader) + '"')
+
 
     @property
-    def FinnhubClient(self):
-        if self._finnhubClient is None:
-            self._finnhubClient = FinnhubClient(self.symbol)
-
-        return self._finnhubClient
-
-    @FinnhubClient.setter
-    def FinnhubClient(self,finnhubClient):
-        if isinstance(finnhubClient,FinnhubClient):
-            self._finnhubClient = finnhubClient
-        else:
-            raise TypeError('Argument "finnhubClient" must be of type "FinnhubClient". You passed a object of type "' + type(finnhubClient) + '"')
+    def financialStatements(self):
+        if self._financialStatements is None:
+            self._financialStatements = self.loadFinancialStatements()
+        return self._financialStatements
 
 
-    @property
-    def financialsAsReported(self):
-        if self._financialsAsReported is None:
-            self._financialsAsReported = self.FinnhubClient.getFinancialsAsReportedDataFrame()
-
-        return self._financialsAsReported
-
-    @financialsAsReported.setter
-    def financialsAsReported(self,financialsAsReported):
-        if isinstance(financialsAsReported,DataFrame):
-            self._financialsAsReported = financialsAsReported
-        else:
-            raise TypeError('Argument "financialsAsReported" must be of type "pandas.DataFrame". You passed a object of type "' + type(financialsAsReported) + '"')
+    def loadFinancialStatements(self):
+        self._financialStatements = self.__DataLoader.getFinancialStatements()
+        return self._financialStatements
 
 
     def getInfo(self):
         if self.info is not None:
             return self.info   
         self.info = self.ticker.info
-
-
-    def getExtraIncomeStatementDate(self):
-        df = loadExtraIncomeStatementData(self.symbol)
-        
-        # add the data to the financialData data frame
-        self.financialData = mergeDataFrame(self.financialData,df)
-        return df
 
 
     def getStockName(self):
@@ -375,39 +367,6 @@ class Stock:
 
         return self.basicData[self.DIVIDEND]
 
-
-    def getBalanceSheet(self):
-        if self.ticker is None:
-            self.getTicker()
-
-        balanceSheet = self.ticker.balance_sheet
-        self.financialData = mergeDataFrame(self.financialData,balanceSheet)
-        return balanceSheet
-
-
-    def getFinancials(self):
-        if self.ticker is None:
-            self.getTicker()
-
-        financials = self.ticker.financials
-        
-        self.financialData = mergeDataFrame(self.financialData,financials)
-        
-        return financials
-
-
-    def getCashflow(self):
-        if self.ticker is None:
-            self.getTicker()
-
-        cashflow = self.ticker.cashflow
-        self.financialData = mergeDataFrame(self.financialData,cashflow)
-
-        # extension
-        df = load_CashFlow(self.symbol)
-        # add the data to the financialData data frame
-        self.financialData = mergeDataFrame(self.financialData,df)
-        return cashflow
     
     def getKeyStatistics(self):
         if self.ticker is None:

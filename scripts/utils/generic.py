@@ -1,8 +1,6 @@
 
-
 import numpy as np
 from datetime import datetime
-
 
 
 def npDateTime64_2_datetime(npDatetime64):
@@ -32,6 +30,9 @@ def mergeDataFrame(dataFrame1,dataFrame2):
             else:
                 columnName = column
             
-            dataFrame1.loc[row,columnName] = dataFrame2.loc[row,column]
+            if (not dataFrame2.loc[row,column] is None) and (not np.isnan(dataFrame2.loc[row,column])):
+                dataFrame1.loc[row,columnName] = dataFrame2.loc[row,column]
+            #else:
+                #print('Do not merge ' + row + ' at ' + columnName + ' because of NAN')
 
     return dataFrame1

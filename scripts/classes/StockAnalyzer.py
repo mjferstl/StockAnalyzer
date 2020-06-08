@@ -63,17 +63,13 @@ class StockAnalyzer():
 
         self.dividendYield = 0
 
+        a = self.stock.financialStatements
+        print(a)
+
         # analyze the stock
         self.analyzeStock()
 
-        #print(self.stock.financialData.loc['Net Income',:])
-        #print(self.stock.financialsAsReported.loc['NetIncomeLoss',:])
-
-        #print(self.stock.financialData.loc['freeCashFlow',:])
-        #print(self.stock.financialsAsReported.loc['freeCashFlow',:])
         
-
-    
     def analyzeStock(self):
         self.calcGrahamNumber()
         self.calcDCF()
@@ -171,7 +167,7 @@ class StockAnalyzer():
         # check if all needed assumptions data is available
         if self.isAssumptionsCompleteForDCF():
             # Free Chashflow der letzten Jahre
-            CF = self.stock.financialData.loc['freeCashFlow',:].copy()
+            CF = self.stock.financialStatements.loc['freeCashFlow',:].copy()
 
             CF.fillna(CF.mean(), inplace=True) # TODO: NaN Werte werden durch Mittelwert ersetzt
 
@@ -303,9 +299,9 @@ class StockAnalyzer():
 
         epsKey = 'dilutedEPS'
         
-        if (self.stock.financialData is not None) and (epsKey in self.stock.financialData.index.values):
+        if (self.stock.financialStatements is not None) and (epsKey in self.stock.financialStatements.index.values):
             # get historical EPS data
-            epsHistory = self.stock.financialData.loc[epsKey,:].copy()
+            epsHistory = self.stock.financialStatements.loc[epsKey,:].copy()
 
             # remove NaN values
             for row in epsHistory.index.values:
@@ -343,13 +339,13 @@ class StockAnalyzer():
         Berechnung des Nettogewinns
     """
     def calcNetMargin(self):
-        if self.stock.financialData is None:
+        if self.stock.financialStatements is None:
             raise Exception('The stock has no historical financial data. "Total Revenue" and "Net Income" needed!')
         else:
             # Nettogewinn
-            netIncome = self.stock.financialData.loc['Net Income',:].copy()
+            netIncome = self.stock.financialStatements.loc['Net Income',:].copy()
             # Umsatz
-            revenues = self.stock.financialData.loc['Total Revenue',:].copy()
+            revenues = self.stock.financialStatements.loc['Total Revenue',:].copy()
 
             dic = {}
             for index in sorted(netIncome.index, reverse=True):
@@ -363,13 +359,13 @@ class StockAnalyzer():
 
 
     def calcReturnOnEquity(self):
-        if self.stock.financialData is None:
+        if self.stock.financialStatements is None:
             raise Exception('The stock has no historical financial data. "Total Stockholder Equity" and "Net Income" needed!')
         else:
             # Eigenkapital
-            equity = self.stock.financialData.loc['Total Stockholder Equity',:].copy()
+            equity = self.stock.financialStatements.loc['Total Stockholder Equity',:].copy()
             # Betriebseinkommen
-            income = self.stock.financialData.loc['Net Income',:].copy()
+            income = self.stock.financialStatements.loc['Net Income',:].copy()
 
             # Berechnung der Eigenkapitalrendite fuer jedes Jahr
             dic = {}
@@ -384,13 +380,13 @@ class StockAnalyzer():
             return df
 
     def calcReturnOnAssets(self):
-        if self.stock.financialData is None:
+        if self.stock.financialStatements is None:
             raise Exception('The stock has no historical financial data. "Total Assets" and "Net Income" needed!')
         else:
             # Gesamtvermögen
-            totalAssets = self.stock.financialData.loc['Total Assets',:].copy()
+            totalAssets = self.stock.financialStatements.loc['Total Assets',:].copy()
             # Betriebseinkommen
-            income = self.stock.financialData.loc['Net Income',:].copy()
+            income = self.stock.financialStatements.loc['Net Income',:].copy()
 
             # Berechnung der Kapitalrendite fuer jedes Jahr
             dic = {}
@@ -404,13 +400,13 @@ class StockAnalyzer():
 
 
     def calcFreeCashFlowBySales(self):
-        if self.stock.financialData is None:
+        if self.stock.financialStatements is None:
             raise Exception('The stock has no historical financial data. "Total Revenue" and "freeCashFlow" needed!')
         else:
             # Umsatz
-            revenues = self.stock.financialData.loc['Total Revenue',:].copy()
+            revenues = self.stock.financialStatements.loc['Total Revenue',:].copy()
             # Free Cash Flow
-            freeCashFlow = self.stock.financialData.loc['freeCashFlow',:].copy()
+            freeCashFlow = self.stock.financialStatements.loc['freeCashFlow',:].copy()
             
             # Berechnung des Free cash flows bezogen auf die Einnahmen fuer jedes Jahr
             dic = {}
@@ -424,13 +420,13 @@ class StockAnalyzer():
 
 
     def calcPriceToSales(self):
-        if self.stock.financialData is None:
+        if self.stock.financialStatements is None:
             raise Exception('The stock has no historical financial data. "Total Revenue" and "Total Stockholder Equity" needed!')
         else:
             # Umsatz
-            revenues = self.stock.financialData.loc['Total Revenue',:].copy()
+            revenues = self.stock.financialStatements.loc['Total Revenue',:].copy()
             # Marktkapitalisierung
-            totalStockHolderEquity = self.stock.financialData.loc['Total Stockholder Equity',:].copy() 
+            totalStockHolderEquity = self.stock.financialStatements.loc['Total Stockholder Equity',:].copy() 
 
             # Price to Sales fuer jedes Jahr
             P_S = pd.Series()
@@ -526,7 +522,7 @@ class StockAnalyzer():
         """
             Operating Income (Pruefung, ob die Firma jemals Geld verdient hat)
         """
-        operatingIncome = self.stock.financialData.loc['Operating Income'].copy()
+        operatingIncome = self.stock.financialStatements.loc['Operating Income'].copy()
         opIncList, opIncSize = [], 'Mrd.'
         strYear, strValue = ' '*6 + '|', ' '*6 + '|'
         for date in list(sorted(operatingIncome.index.values.copy())):
@@ -548,7 +544,7 @@ class StockAnalyzer():
         """
             Cash flow from operating activities
         """
-        totalCashFlowFromOperations = self.stock.financialData.loc['Total Cash From Operating Activities'].copy()
+        totalCashFlowFromOperations = self.stock.financialStatements.loc['Total Cash From Operating Activities'].copy()
 
         cashFromOpActList = []
         strYear, strValue = ' '*6 + '|', ' '*6 + '|'
@@ -573,8 +569,8 @@ class StockAnalyzer():
             ROA - Return on Assets
             Financial Leverage
         """
-        equity = self.stock.financialData.loc["Total Stockholder Equity"].copy()
-        assets = self.stock.financialData.loc["Total Assets"].copy()
+        equity = self.stock.financialStatements.loc["Total Stockholder Equity"].copy()
+        assets = self.stock.financialStatements.loc["Total Assets"].copy()
 
         leverageList = []
         strYear, strROE, strROA, strLeverage = ' '*6 + '|', '- ROE |', '- ROA |', '- LEV |'
@@ -636,7 +632,7 @@ class StockAnalyzer():
         """
             Earnings Growth - Gewinnwachstum
         """
-        earnings = self.stock.financialData.loc['Net Income'].copy()
+        earnings = self.stock.financialStatements.loc['Net Income'].copy()
 
         earningsList = []
         strYear, strEarnings = ' '*6 + '|', ' '*6 + '|'
@@ -661,8 +657,8 @@ class StockAnalyzer():
         """
             Free Cash Flow / Sales
         """
-        freeCashFlow = self.stock.financialData.loc['freeCashFlow'].copy()
-        sales = self.stock.financialData.loc['Total Revenue'].copy()
+        freeCashFlow = self.stock.financialStatements.loc['freeCashFlow'].copy()
+        sales = self.stock.financialStatements.loc['Total Revenue'].copy()
 
         freeCashFlowToSales = []
         strYear, strValue = ' '*6 + '|', ' '*6 + '|'
@@ -691,7 +687,7 @@ class StockAnalyzer():
         """
             Number of shares
         """
-        averageShares = self.stock.financialData.loc['dilutedAverageShares'].copy()
+        averageShares = self.stock.financialStatements.loc['dilutedAverageShares'].copy()
 
         avgSharesList = []
         strYear, strValue = ' '*6 + '|', ' '*6 + '|'
@@ -725,7 +721,7 @@ class StockAnalyzer():
         """
             Free Cash Flow
         """
-        freeCashFlow = self.stock.financialData.loc['freeCashFlow'].copy()
+        freeCashFlow = self.stock.financialStatements.loc['freeCashFlow'].copy()
 
         strYear, strValue = ' '*6 + '|', ' '*6 + '|'
         for date in list(sorted(freeCashFlow.index.values.copy())):
@@ -742,7 +738,7 @@ class StockAnalyzer():
         """
             Discounted Cash Flow
         """
-        freeCashFlow = self.stock.financialData.loc['freeCashFlow'].copy()
+        freeCashFlow = self.stock.financialStatements.loc['freeCashFlow'].copy()
         freeCashFlowList = [freeCashFlow[date] for date in list(sorted(freeCashFlow.index.values.copy()))]
         freeCashFlowGrowth = self.calcGrowth(freeCashFlowList,percentage=True)
         avgFreeCashFlowGrowth = sum(freeCashFlowGrowth)/len(freeCashFlowGrowth)
@@ -867,15 +863,15 @@ class LevermannScore():
     def calcScore(self):
         # TODO calcLevermannScore implementieren
         LevermannScore = 0
-        #print(self.stock.financialData)
+        #print(self.stock.financialStatements)
 
         # RoE (Return on Equity) Eigenkapitalrendite (Gewinn / Eigenkapital)
         # Eigenkapital
-        equity = list(self.stock.financialData.loc['Total Stockholder Equity',:].copy())
+        equity = list(self.stock.financialStatements.loc['Total Stockholder Equity',:].copy())
         # TODO Klärung ob "Net Income" (abzgl. Steuern etc.) oder "Operating Income" (Steuern noch nicht abgezogen)
         # laut dem Wert auf "https://aktien.guide/levermann-strategie/Microsoft-US5949181045" muss der Eintrag aus "Operating Income" genutzt werden
         # da sonst ein zu niedriger Prozentwert entsteht
-        Gewinn = list(self.stock.financialData.loc['Operating Income',:].copy())
+        Gewinn = list(self.stock.financialStatements.loc['Operating Income',:].copy())
 
         # Eigenkapitalrendite fuer jedes Jahr
         annualyRoE = [gewinn/ek*100 for gewinn,ek in zip(Gewinn,equity)]
@@ -891,15 +887,15 @@ class LevermannScore():
 
         # EBIT-Marge (EBIT / Umsatz)
         # EBIT
-        EBIT = list(self.stock.financialData.loc['Ebit',:].copy())
+        EBIT = list(self.stock.financialStatements.loc['Ebit',:].copy())
         if 0 in EBIT:
             print('\n +++ EBIT enthält mindestens einen Eintrag mit 0 +++')
-            print(self.stock.financialData.loc['Ebit',:])
-            print(self.stock.financialData)
+            print(self.stock.financialStatements.loc['Ebit',:])
+            print(self.stock.financialStatements)
             print('\n')
 
         # Umsatz
-        totalSales = list(self.stock.financialData.loc['Total Revenue',:].copy())
+        totalSales = list(self.stock.financialStatements.loc['Total Revenue',:].copy())
 
         # EBIT-Marge der letzten Jahre und Mittelwert
         annualyEbitMarge = [ebit/umsatz*100 for ebit,umsatz in zip(EBIT,totalSales)]
@@ -915,7 +911,7 @@ class LevermannScore():
         # EKQ Eigenkapitalquote
         # Eigenkapital (schon vorhanden, da bei RoE verwendet)
         # Gesamtverbindlichkeiten + Eigenkapital
-        GK = list(self.stock.financialData.loc['Total Assets',:].copy())
+        GK = list(self.stock.financialStatements.loc['Total Assets',:].copy())
 
         # Eigenkapitalquote
         annualyEKratio = [ek/gk*100 for ek,gk in zip(equity,GK)]
@@ -954,7 +950,7 @@ class LevermannScore():
 
         # KGV 5 Jahre (letzten 3 Jahre, aktuelles Jahr, nächstes Jahr)
         # EPS der letzten Jahre auslesen und von alt zu neu sortieren
-        EPSdf = self.stock.financialData.loc['dilutedEPS',:].copy()
+        EPSdf = self.stock.financialStatements.loc['dilutedEPS',:].copy()
         # Die Eintraege absteigend nach dem Datum auslesen
         EPS = [EPSdf.loc[date] for date in sorted(EPSdf.index,reverse=True)]
         # alt zu neu
@@ -1209,7 +1205,7 @@ class LevermannScore():
 
     def printScore(self):
 
-        #print(self.stock.financialData)
+        #print(self.stock.financialStatements)
 
         sepLineLength = 45
 
