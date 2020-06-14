@@ -446,6 +446,105 @@ class StockAnalyzer():
             factor = 1
         return [(valueList[i]-valueList[i-1])/valueList[i-1]*factor for i in range(1,len(valueList))]
 
+    
+    def createPDF(self):
+
+        cs = self.stock.currencySymbol
+        xlabel = 'Jahr'
+
+        pdf = StockPDF(pdfFileName=self.stock.symbol + '.pdf')
+        pdf.newPage()
+
+        """
+            Plot 1
+        """
+        # Plot Operating Income
+        ylabel = 'Income in Mrd. ' + cs
+        operatingIncome = self.stock.financialStatements.loc['Operating Income'].copy()/10**9
+        operatingIncome = operatingIncome.reindex(sorted(operatingIncome.index,reverse=True), axis=0)
+        pdf.addPlot(1,operatingIncome, title='Income', xlabel=xlabel, ylabel=ylabel, line=False, label="Operating Income")
+        
+        # Regressionsrechnung Operating Income
+        if not np.any(np.isnan(operatingIncome)):
+            series = self.__interpolate(operatingIncome)
+            pdf.addPlot(1,series, title='Income', xlabel=xlabel, ylabel=ylabel, line=True, label="Operating Income (lin. Regression)")
+
+        # Net Income
+        netIncome = self.stock.financialStatements.loc['Net Income'].copy()/10**9
+        netIncome = netIncome.reindex(sorted(netIncome.index,reverse=True), axis=0)
+        pdf.addPlot(1,netIncome,title='Income',xlabel=xlabel,ylabel=ylabel, line=False, label="Net Income")
+
+        """
+            Plot 2
+        """
+        # Cash flow from operating activities
+        ylabel = 'Cash flow in Mrd. ' + cs
+        totalCashFlowFromOperations = self.stock.financialStatements.loc['Total Cash From Operating Activities'].copy()/10**9
+        totalCashFlowFromOperations = totalCashFlowFromOperations.reindex(sorted(totalCashFlowFromOperations.index,reverse=True), axis=0)
+        pdf.addPlot(2,totalCashFlowFromOperations,title='Cash flow',xlabel=xlabel,ylabel=ylabel, line=False, label="Cash Flow from operating activities")
+
+        # Regressionsrechnung
+        if not np.any(np.isnan(totalCashFlowFromOperations)):
+            series = self.__interpolate(totalCashFlowFromOperations)
+            pdf.addPlot(2,series,title='Cash flow',xlabel=xlabel,ylabel=ylabel, line=True, label="Cash Flow from operating activities (lin. Regression)")
+
+        # Free cash flow
+        freeCashFlow = self.stock.financialStatements.loc['freeCashFlow'].copy()/10**9
+        freeCashFlow = freeCashFlow.reindex(sorted(freeCashFlow.index,reverse=True), axis=0)
+        pdf.addPlot(2,freeCashFlow,title='Cash flow',xlabel=xlabel,ylabel=ylabel, line=False, label="Free Cash Flow")
+
+        """
+            Plot 3
+        """
+        # Return on Equity
+        ylabel = 'in %'
+        ROE = self.ReturnOnEquity*100
+        ROE = ROE.reindex(sorted(ROE.index,reverse=True), axis=0)
+        pdf.addPlot(3,ROE,xlabel=xlabel,ylabel=ylabel, line=False, label='Return on Equity')
+
+        # Return on Assets
+        ROA = self.ReturnOnAssets*100
+        ROA = ROA.reindex(sorted(ROA.index,reverse=True), axis=0)
+        pdf.addPlot(3,ROA,xlabel=xlabel,ylabel=ylabel, line=False, label='Return on Assets')
+
+        """
+            Plot 4
+        """
+        # Number of Shares
+        ylabel = 'Diluted number in Mio.'
+        averageShares = self.stock.financialStatements.loc['dilutedAverageShares'].copy()/10**6
+        averageShares = averageShares.reindex(sorted(averageShares.index,reverse=True), axis=0)
+        pdf.addPlot(4,averageShares, xlabel=xlabel, ylabel=ylabel, title='Number of shares outstanding', line=False)
+
+
+        """
+            New page
+        """
+        pdf.newPage()
+
+        """
+            Plot 1
+        """
+        ylabel = ''
+        equity = self.stock.financialStatements.loc["Total Stockholder Equity"].copy()
+        assets = self.stock.financialStatements.loc["Total Assets"].copy()
+        series = pd.Series()
+        for date in sorted(equity.index.values, reverse=True):
+            series.loc[date] = assets.loc[date]/equity.loc[date]
+        pdf.addPlot(1,series, xlabel=xlabel, ylabel=ylabel, title='Financial Leverage', line=False)
+        
+        pdf.closePDF()
+
+
+    def __interpolate(self,dataSeries):
+        # Regressionsrechnung Operating Income
+        years = [float(y[0:4]) for y in dataSeries.index.values]
+        lr = linearRegression(years,dataSeries.values)
+        series = pd.Series()
+        for y in dataSeries.index.values:
+            series.loc[y] = lr.predict(np.array([float(y[0:4])]).reshape(1, -1))
+        return series
+
 
     def printBasicAnalysis(self):
 
@@ -1349,3 +1448,119 @@ def linearRegression(x,y,plotResult=False):
         plt.show()
 
     return model
+
+
+
+from matplotlib.backends.backend_pdf import PdfPages, PdfFile
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib as mpl
+
+class StockPDF():
+
+    # size in pt
+    FONTSIZE = 10
+
+    # default figure size in inches
+    # DIN A4
+    FIGURE_WIDTH = 29.7/2.54
+    FIGURE_HEIGHT = 21.0/2.54
+
+    __FONTSIZE_FACTOR_LEGEND = 0.8
+
+    def __init__(self,pdfFileName=None):
+
+        self.initVars()
+
+        # set filename of the PDF
+        if pdfFileName is not None:
+            self.filename = pdfFileName
+        else:
+            self.filename = 'unknown_' + datetime.datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S') + '.pdf'
+
+        self._pdf = PdfPages(self.filename)
+        
+
+    def initVars(self):
+        self._filename = None
+        self._pdf = None
+        self._colormap = plt.get_cmap('tab10')
+        self._fig = None
+        self._axes = None
+
+
+    @property
+    def filename(self):
+        return self._filename
+
+    @filename.setter
+    def filename(self,filename):
+        self._filename = filename
+
+    def newPage(self):
+
+        if self._fig is not None:
+            self.__closeFigure()
+
+        # add a plot
+        self._fig, self._axes = plt.subplots(ncols=2, nrows=2)
+
+        # linewidth for the axes
+        mpl.rcParams['axes.linewidth'] = 0.7
+
+        # labels are 70% of the fontsize
+        mpl.rcParams['xtick.labelsize'] = int(self.FONTSIZE*self.__FONTSIZE_FACTOR_LEGEND)
+        mpl.rcParams['ytick.labelsize'] = int(self.FONTSIZE*self.__FONTSIZE_FACTOR_LEGEND)
+
+
+    def addPlot(self,plotnumber,data,legendPos='upper left',xlabel='Date',ylabel='value',title='',line=True, label=None):
+
+        if plotnumber <= len(self._axes[0]):
+            ax = self._axes[0][plotnumber-1]
+        else:
+            ax = self._axes[(plotnumber-1)//len(self._axes[0])][plotnumber%len(self._axes[0])-1]
+
+        dataSeries = pd.Series()
+        for index in reversed(data.index.values):
+            dataSeries.loc[datetime.datetime.strftime(datetime.datetime.strptime(index,'%Y-%m-%d'),'%Y')] = data.loc[index]
+
+        #print(dataSeries)
+
+        if not line:
+            if label is None:
+                ax.plot(dataSeries, marker='.', linestyle="None", markersize=10)
+            else: 
+                ax.plot(dataSeries, marker='.', linestyle="None", markersize=10, label=label)
+        else:
+            if label is None:
+                ax.plot(dataSeries)
+            else:
+                ax.plot(dataSeries, label=label)
+
+        if label is not None:
+            ax.legend(loc='best', prop={'size': int(self.FONTSIZE*self.__FONTSIZE_FACTOR_LEGEND)})
+
+        ax.grid(True)
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+
+
+    def __closeFigure(self):
+        self._fig = plt.gcf()
+        self._fig.set_size_inches(self.FIGURE_WIDTH, self.FIGURE_HEIGHT)
+        self._fig.tight_layout(pad=3)
+        self._pdf.savefig()
+        self._fig.clf()
+
+
+    def closePDF(self):
+
+        self.__closeFigure()
+
+        try:
+            self._pdf.close()
+            print(self.filename + ' wurde erstellt!')
+        except:
+            print(self.filename + ' konnte nicht erstellt werden')

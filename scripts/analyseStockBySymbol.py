@@ -12,7 +12,9 @@ def analyseStockBySymbol(symbol, growthRateEstimated=None, margin_of_safety=None
     # creating a stock object
     stock = Stock(stockSymbol=symbol, growthRateEstimate=growthRateEstimated, margin_of_safety=margin_of_safety, discountRate=discountRate)
     # analyse the stock data
-    StockAnalyzer(stock).printBasicAnalysis()
+    sa = StockAnalyzer(stock)
+    sa.printBasicAnalysis()
+    sa.createPDF()
 
 
 def save_config(arguments):
