@@ -1,5 +1,5 @@
 
-
+import os
 import requests
 import numpy as np
 from datetime import datetime
@@ -12,7 +12,7 @@ from classes.GlobalVariables import *
 
 class FinnhubClient():
 
-    APIkey = json.load(FinnhubAccountData)['APIkey']
+    _APIkey = None
     baseUrl = "https://finnhub.io/api/v1/"
 
     NOT_DATA_VALUE = np.nan
@@ -20,6 +20,15 @@ class FinnhubClient():
     def __init__(self,symbol):
         self.symbol = symbol
         self.getPeerGroup()
+        self._APIkey = None
+
+    @property
+    def APIkey(self):
+        if self._APIkey is None:
+            currentFolder = os.path.dirname(os.path.abspath(__file__))
+            with open(currentFolder + '/FinnhubAccountData.json') as f:
+                self._APIkey = json.load(f)['APIkey']
+        return self._APIkey
 
 
     def getData(self):
