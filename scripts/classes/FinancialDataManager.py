@@ -2,6 +2,7 @@
 from classes.FinnhubAPI import FinnhubClient
 from classes.YFinanceAPI import YFinanceClient
 from utils.generic import mergeDataFrame
+from classes.GlobalVariables import *
 
 class DataLoader():
 

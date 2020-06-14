@@ -4,23 +4,15 @@ import requests
 import numpy as np
 from datetime import datetime
 from pandas import DataFrame
+import json
+
 from utils.generic import npDateTime64_2_str
-
-
-NET_INCOME = 'Net Income'
-FREE_CASH_FLOW = 'freeCashFlow'
-REVENUES = 'Total Revenue'
-STOCKHOLDERS_EQUITY = 'Total Stockholder Equity'
-ASSETS = 'Total Assets'
-CASH_FROM_OPERATING_ACTIVITIES = 'Total Cash From Operating Activities'
-DILUTED_AVERAGE_SHARES = 'dilutedAverageShares'
-OPERATING_INCOME = 'Operating Income'
-EBIT = 'Ebit'
+from classes.GlobalVariables import *
 
 
 class FinnhubClient():
 
-    APIkey = "bq8r88frh5rc96c0kjf0"
+    APIkey = json.load(FinnhubAccountData)['APIkey']
     baseUrl = "https://finnhub.io/api/v1/"
 
     NOT_DATA_VALUE = np.nan
