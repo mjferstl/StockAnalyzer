@@ -61,6 +61,8 @@ class StockAnalyzer():
         self._PriceToSales = None
         self._PriceToEarnings = None
         self._PresentShareValue = None
+        self._CurrentRatio = None
+        self._AssetTurnover = None
 
         self.dividendYield = 0
 
@@ -77,6 +79,7 @@ class StockAnalyzer():
         self.calcReturnOnEquity()
         self.calcReturnOnAssets()
         self.calcFreeCashFlowBySales()
+        self.calcPiotroskiFScore()
 
 
     @property
@@ -132,6 +135,29 @@ class StockAnalyzer():
         if self._PresentShareValue is None:
             self.calcDCF()
         return self._PresentShareValue
+
+    @property
+    def currentRatio(self):
+        if self._CurrentRatio is None:
+            currentAssets = self.stock.financialStatements.loc['Total Current Assets'].copy()
+            currentLiabilities = self.stock.financialStatements.loc['Total Current Liabilities'].copy()
+            df = pd.Series()
+            for date in currentAssets.index.values:
+                df.loc[date] = currentAssets.loc[date]/currentLiabilities.loc[date]
+            self._CurrentRatio = df
+        return self._CurrentRatio
+
+    @property
+    def assetTurnover(self):
+        if self._AssetTurnover is None:
+            sales = self.stock.financialStatements.loc[REVENUES,:]
+            assets = self.stock.financialStatements.loc[ASSETS,:]
+            df = pd.Series()
+            for date in sales.index.values:
+                df.loc[date] = sales.loc[date]/assets.loc[date]
+
+            self._AssetTurnover = df
+        return self._AssetTurnover
 
     """
         Berechnung der Graham Number
@@ -247,8 +273,11 @@ class StockAnalyzer():
 
             if generatePlot:
                 createPlot([years,years[-1],year],[CF_sorted,FCFstartValue,FCF[:-1]],legend_list=['historical free cash flows','start value for DCF method','estimated free cash flows'])
+        
+            return FCF
         else:
             print(' +++ Discounted Cash Flow Analysis failed due to missing data +++ ')
+            return []
 
 
     """
@@ -262,28 +291,83 @@ class StockAnalyzer():
 
     
     def calcPiotroskiFScore(self):
+
+        score = 0
+
         # TODO calcPiotroskiFScore implementieren
         # Nettogewinn
-        #
+        # Punkt, wenn positiver Wert
+        netIncome = self.stock.financialStatements.loc[NET_INCOME,:].copy()
+        dates = sorted(netIncome.index.values)
+        thisYear, previousYear = dates[-1], dates[-2]
+        if (netIncome.loc[thisYear]) > 0:
+            score += 1
+
         # Operating Cashflow
-        #
+        # Punkt, wenn positiver Wert
+        operatingCashFlow = self.stock.financialStatements.loc[CASH_FROM_OPERATING_ACTIVITIES,:]
+        if (operatingCashFlow.loc[thisYear] > 0):
+            score += 1
+        
         # Gesamtkapitalrendite
-        #
+        # Punkt, wenn groesser als im Vorjahr
+        ROA = self.ReturnOnAssets
+        if (ROA.loc[thisYear] > ROA.loc[previousYear]):
+            score += 1
+        
         # Operating Cashflow versus Nettogewinn
-        #
+        # Punkt, wenn Operativer Cash Flow groesser als Nettogewinn
+        if (operatingCashFlow.loc[thisYear] > netIncome.loc[thisYear]):
+            score += 1
+        
         # Verschuldungsgrad
-        #
+        # Punkt wenn LongTerm-Debt/Assets kleiner als im Vorjahr
+        longTermDebt = self.stock.financialStatements.loc['Long Term Debt']
+        assets = self.stock.financialStatements.loc[ASSETS].copy()
+        ltd2a = []
+        for date in dates[-2:]:
+            ltd2a.append(longTermDebt.loc[date]/assets.loc[date])
+        if (ltd2a[-1] < ltd2a[-2]):
+            score += 1
+        
         # Liquidität 3. Grades
-        #
+        # Punkt, wenn die current ratio groeser ist als im Vorjahr
+        currentRatio = self.currentRatio
+        if (currentRatio.loc[thisYear] > currentRatio.loc[previousYear]):
+            score += 1
+        
         # Aktienanzahl
-        #
+        # Punkt, wenn die Aktienanzahl nicht zugenommen hat
+        numberOfShares = self.stock.financialStatements.loc[DILUTED_AVERAGE_SHARES,:]
+        if not (numberOfShares.loc[thisYear] > numberOfShares.loc[previousYear]):
+            score += 1
+
         # Rohmarge
-        #
+        # Punkt, wenn die Bruttomarge im Vergleich zum Vorjahr gewachsen ist
+        grossProfit = self.stock.financialStatements.loc['Gross Profit',:]
+        revenues = self.stock.financialStatements.loc[REVENUES,:]
+        if ((grossProfit.loc[thisYear]/revenues.loc[thisYear]) > (grossProfit.loc[previousYear]/revenues.loc[previousYear])):
+            score += 1
+        
         # Kapitalumschlag
-        #
+        # Punkt, wenn asset turnover groesser ist als im Vorjahr
+        assetTurnover = self.assetTurnover
+        if (assetTurnover.loc[thisYear] > assetTurnover.loc[previousYear]):
+            score += 1
+
         # Gesamtbewertung
         # Hoch: 7-9P, Mittel: 3-6P, Niedrig: 0-2P
-        pass
+        if (score >= 7):
+            bewertung = 'Hoch'
+        elif (score >= 3):
+            bewertung = 'Mittel'
+        else: 
+            bewertung = 'Niedrig'
+
+        comment = 'Piotroski F Score: {score:.0f} ({bew})'.format(score=score,bew=bewertung)
+
+        return score, comment
+
 
     def calcTechnicalIndicator(self):
         # TODO calcTechincalIndicator implementieren
@@ -860,6 +944,12 @@ class StockAnalyzer():
             strDiscountedCashFlow = 'Discounted Cash Flow (DCF)\n' + ' +++ Can\'t be calculated due to missing data +++\n' + \
                 '   (previous average cash flow growth: {v:.1f}%)'.format(v=avgFreeCashFlowGrowth) + '\n'
 
+        """
+            Piotroski F Score
+        """
+        score, comment = self.calcPiotroskiFScore()
+        strPiotroskiFScore = comment + '\n'
+
         # Combine all fragments to a string
         string2Print = sepString + \
             stockNameOutput + '\n' + \
@@ -881,6 +971,8 @@ class StockAnalyzer():
             strFreeCashFlow + \
             sepString + \
             strDiscountedCashFlow + \
+            sepString + \
+            strPiotroskiFScore + \
             sepString + \
             strCurrentStockValue + \
             sepString
