@@ -500,12 +500,14 @@ class StockAnalyzer():
         # Return on Equity
         ylabel = 'in %'
         ROE = self.ReturnOnEquity*100
-        ROE = ROE.reindex(sorted(ROE.index,reverse=True), axis=0)
+        ROA = self.ReturnOnAssets*100
+        dates = sorted(list(set(list(ROE.index)+list(ROA.index))),reverse=True)
+        ROE = ROE.reindex(dates, axis=0)
         pdf.addPlot(3,ROE,xlabel=xlabel,ylabel=ylabel, line=False, label='Return on Equity')
 
         # Return on Assets
-        ROA = self.ReturnOnAssets*100
-        ROA = ROA.reindex(sorted(ROA.index,reverse=True), axis=0)
+        
+        ROA = ROA.reindex(dates, axis=0)
         pdf.addPlot(3,ROA,xlabel=xlabel,ylabel=ylabel, line=False, label='Return on Assets')
 
         """
