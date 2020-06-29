@@ -133,18 +133,18 @@ class FinnhubClient():
 
             # run over all entries in the balance sheet
             balanceSheet = d['report']['bs']
-            for bselem in balanceSheet:
-                df_fullData.loc[bselem,date] = balanceSheet[bselem]
+            for index, bselem in enumerate(balanceSheet):
+                df_fullData.loc[bselem['concept'],date] = balanceSheet[index]['value']
 
             # run over all entires in the income statement
             incomeStatement = d['report']['ic']
-            for icelem in incomeStatement:
-                df_fullData.loc[icelem,date] = incomeStatement[icelem]
+            for index, icelem in enumerate(incomeStatement):
+                df_fullData.loc[icelem['concept'],date] = incomeStatement[index]['value']
 
             # run over all entires in the statement of cash flows
             statementOfCashFlows = d['report']['cf']
-            for cfelem in statementOfCashFlows:
-                df_fullData.loc[cfelem,date] = statementOfCashFlows[cfelem]
+            for index, cfelem in enumerate(statementOfCashFlows):
+                df_fullData.loc[cfelem['concept'],date] = statementOfCashFlows[index]['value']
 
             ## Free cash flow
             cashFlowFromOperations = None 
@@ -217,7 +217,8 @@ class FinnhubClient():
             keys = [keys]
 
         for key in keys:
-            if key in statement.keys():
-                return statement[key]
+            for item in statement:
+                if item['concept'] == key:
+                    return item['value']
         
         return self.NOT_DATA_VALUE
