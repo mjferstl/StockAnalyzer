@@ -889,6 +889,8 @@ class StockAnalyzer():
         avgAverageSharesGrowth = sum(averageSharesGrowth)/len(averageSharesGrowth)
         if avgAverageSharesGrowth < 0:
             strAverageShares = ' '*6 + 'Aktienrückkäufe --> könnte gut sein'
+        elif avgAverageSharesGrowth == 0:
+            strAverageShares = ' '*6 + 'Anzahl der Aktien bleibt gleich'
         elif (avgAverageSharesGrowth > 0) and (avgAverageSharesGrowth < 1.5):
             strAverageShares = ' '*6 + 'Anzahl der Aktien steigt um jährlich ca. {v:.1f}%'.format(v=avgAverageSharesGrowth)
         elif avgAverageSharesGrowth > 2:
