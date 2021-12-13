@@ -6,7 +6,7 @@ idna==2.9
 joblib==0.14.1
 kiwisolver==1.2.0
 lark-parser==0.7.8
-lxml==4.5.0
+lxml==4.6.5
 matplotlib==3.2.1
 multitasking==0.0.9
 numpy==1.18.2
